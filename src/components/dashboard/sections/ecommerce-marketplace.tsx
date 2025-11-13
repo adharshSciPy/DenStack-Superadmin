@@ -4,17 +4,20 @@ import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { 
-  Search, 
-  Filter, 
-  ShoppingCart, 
-  Package, 
-  Star, 
+import {
+  Search,
+  Filter,
+  ShoppingCart,
+  Package,
+  Star,
   Eye,
   TrendingUp,
   Users,
   DollarSign
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import axios from "axios";
+import inventoryUrl from '../../../inventoryUrl.js';
 
 const featuredProducts = [
   {
@@ -72,6 +75,26 @@ const marketplaceStats = [
 ];
 
 export function EcommerceMarketplace() {
+  const token = "fdufhskjghfsguih"
+
+  const fetchProducts = async () => {
+    try {
+      const productDetails = await axios.get(`${inventoryUrl}/api/v1/product/productsDetails`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      console.log("products", productDetails)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -171,8 +194,8 @@ export function EcommerceMarketplace() {
                 {featuredProducts.map((product) => (
                   <Card key={product.id} className="hover:shadow-lg transition-shadow">
                     <div className="aspect-video bg-accent rounded-t-lg overflow-hidden">
-                      <img 
-                        src={product.image} 
+                      <img
+                        src={product.image}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />
@@ -183,20 +206,20 @@ export function EcommerceMarketplace() {
                           <h3 className="font-medium text-sm line-clamp-2">{product.name}</h3>
                           <Badge variant="outline" className="text-xs">{product.availability}</Badge>
                         </div>
-                        
+
                         <p className="text-xs text-muted-foreground">{product.category}</p>
-                        
+
                         <div className="flex items-center gap-1">
                           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                           <span className="text-xs">{product.rating}</span>
                           <span className="text-xs text-muted-foreground">({product.reviews})</span>
                         </div>
-                        
+
                         <div className="flex items-center justify-between">
                           <span className="text-lg text-primary">${product.price}</span>
                           <span className="text-xs text-muted-foreground">{product.vendor}</span>
                         </div>
-                        
+
                         <div className="space-y-2">
                           <p className="text-xs text-muted-foreground">Access:</p>
                           <div className="flex flex-wrap gap-1">
@@ -207,7 +230,7 @@ export function EcommerceMarketplace() {
                             ))}
                           </div>
                         </div>
-                        
+
                         <div className="flex gap-2 pt-2">
                           <Button size="sm" variant="outline" className="flex-1">
                             <Eye className="w-3 h-3 mr-1" />
