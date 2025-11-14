@@ -89,14 +89,14 @@ export default function SuperadminLogin() {
                 </label>
                 <div className="relative">
                   <div className="absolute left-3 top-3 text-muted-foreground">
-                    <User className="w-4 h-4" />
+                    <User className="w-full h-full mt-2" />
                   </div>
                   <input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-input-background border border-border rounded-lg pl-10 py-4 px-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-1 focus-visible:outline-ring transition-colors"
+                    className="w-full h-20 p-2 bg-input-background border border-border rounded-lg pl-10 py-4 px-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-1 focus-visible:outline-ring transition-colors"
                     placeholder="superadmin@denstack.com"
                   />
                 </div>
@@ -112,14 +112,14 @@ export default function SuperadminLogin() {
                 </label>
                 <div className="relative">
                   <div className="absolute left-3 top-3 text-muted-foreground">
-                    <Lock className="w-4 h-4" />
+                    <Lock className="w-full h-full mt-2" />
                   </div>
                   <input
                     id="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-input-background border border-border rounded-lg pl-10 py-3 px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-1 focus-visible:outline-ring transition-colors"
+                    className="w-full h-20 p-2 bg-input-background border border-border rounded-lg pl-10 py-3 px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-1 focus-visible:outline-ring transition-colors"
                     placeholder="Enter your password"
                   />
                 </div>
@@ -130,7 +130,7 @@ export default function SuperadminLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full h-20 p-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-colors"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>

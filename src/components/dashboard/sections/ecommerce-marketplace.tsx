@@ -18,45 +18,26 @@ import {
 import { useEffect, useState } from 'react';
 import axios from "axios";
 import inventoryUrl from '../../../inventoryUrl.js';
+import { useAppSelector } from "../../../redux/hooks.js";
 
-const featuredProducts = [
-  {
-    id: 1,
-    name: 'Digital X-Ray Sensor',
-    price: 2499,
-    category: 'Imaging Equipment',
-    rating: 4.8,
-    reviews: 24,
-    vendor: 'TechDental Solutions',
-    image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=300&h=200&fit=crop&crop=center',
-    availability: 'In Stock',
-    clinicAccess: ['Clinic Admin', 'Dentist']
-  },
-  {
-    id: 2,
-    name: 'Dental Implant Kit',
-    price: 899,
-    category: 'Surgical Instruments',
-    rating: 4.9,
-    reviews: 18,
-    vendor: 'Premium Dental Supply',
-    image: 'https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=300&h=200&fit=crop&crop=center',
-    availability: 'In Stock',
-    clinicAccess: ['Clinic Admin', 'Dentist']
-  },
-  {
-    id: 3,
-    name: 'Composite Filling Material',
-    price: 149,
-    category: 'Consumables',
-    rating: 4.6,
-    reviews: 45,
-    vendor: 'DentalCare Products',
-    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300&h=200&fit=crop&crop=center',
-    availability: 'In Stock',
-    clinicAccess: ['Clinic Admin', 'Dentist', 'Dental Assistant']
-  }
-];
+interface Product {
+  _id: string;
+  name: string;
+  brand: string | { brandName?: string }; // API sometimes sends id, sometimes full object
+  category: { _id: string };
+  description: string;
+  price: number;
+  stock: number;
+  image: string[];
+  expiryDate: string;
+  status: string;
+  isLowStock: boolean;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+
 
 const categories = [
   { name: 'Imaging Equipment', count: 45, icon: '📷' },
@@ -75,15 +56,19 @@ const marketplaceStats = [
 ];
 
 export function EcommerceMarketplace() {
-  const token = "fdufhskjghfsguih"
+  const { token } = useAppSelector((state) => state.auth);
+
+  const [products, setProducts] = useState<Product[]>([]);
 
   const fetchProducts = async () => {
     try {
-      const productDetails = await axios.get(`${inventoryUrl}/api/v1/product/productsDetails`, {
+      console.log("token", token)
+      const productDetails = await axios.get(`${inventoryUrl}api/v1/product/productsDetails`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       })
+      setProducts(productDetails.data.data)
       console.log("products", productDetails)
     } catch (error) {
       console.log(error)
@@ -93,6 +78,9 @@ export function EcommerceMarketplace() {
   useEffect(() => {
     fetchProducts()
   }, [])
+
+  const featuredProducts = products;
+
 
 
   return (
@@ -189,48 +177,58 @@ export function EcommerceMarketplace() {
               <CardTitle>Featured Products</CardTitle>
               <CardDescription>Top-performing products in the marketplace</CardDescription>
             </CardHeader>
+
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredProducts.map((product) => (
-                  <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                    <div className="aspect-video bg-accent rounded-t-lg overflow-hidden">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
+              {featuredProducts.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No featured products available.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {featuredProducts.map((product) => (
+                    <Card key={product._id} className="hover:shadow-lg transition-shadow">
+
+                      {/* IMAGE */}
+                      <div className="aspect-video bg-accent rounded-t-lg overflow-hidden">
+                        
+                        <img
+                          src={
+                            product.image?.[0]
+                              ? `${inventoryUrl}${product.image[0]}`
+                              : "/placeholder.png"
+                          }
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+
+                      <CardContent className="p-4 space-y-3">
+
+                        {/* NAME + STATUS */}
                         <div className="flex items-start justify-between">
                           <h3 className="font-medium text-sm line-clamp-2">{product.name}</h3>
-                          <Badge variant="outline" className="text-xs">{product.availability}</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {product.status}
+                          </Badge>
                         </div>
 
-                        <p className="text-xs text-muted-foreground">{product.category}</p>
+                        {/* CATEGORY */}
+                        <p className="text-xs text-muted-foreground">
+                          Category: {product.category?._id}
+                        </p>
 
-                        <div className="flex items-center gap-1">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-xs">{product.rating}</span>
-                          <span className="text-xs text-muted-foreground">({product.reviews})</span>
-                        </div>
+                        {/* STOCK */}
+                        <p className="text-xs text-muted-foreground">
+                          Stock: {product.stock}
+                        </p>
 
+                        {/* PRICE */}
                         <div className="flex items-center justify-between">
                           <span className="text-lg text-primary">${product.price}</span>
-                          <span className="text-xs text-muted-foreground">{product.vendor}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {typeof product.brand === "string" ? product.brand : product.brand?.brandName}
+                          </span>
                         </div>
 
-                        <div className="space-y-2">
-                          <p className="text-xs text-muted-foreground">Access:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {product.clinicAccess.map((access) => (
-                              <Badge key={access} variant="secondary" className="text-xs">
-                                {access}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-
+                        {/* BUTTONS */}
                         <div className="flex gap-2 pt-2">
                           <Button size="sm" variant="outline" className="flex-1">
                             <Eye className="w-3 h-3 mr-1" />
@@ -240,11 +238,11 @@ export function EcommerceMarketplace() {
                             Edit
                           </Button>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
