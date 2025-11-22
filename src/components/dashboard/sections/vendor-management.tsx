@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
@@ -5,11 +6,11 @@ import { Input } from '../../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Progress } from '../../ui/progress';
-import { 
-  Search, 
-  Plus, 
-  Star, 
-  Package, 
+import {
+  Search,
+  Plus,
+  Star,
+  Package,
   DollarSign,
   TrendingUp,
   Users,
@@ -19,73 +20,105 @@ import {
   Mail,
   MapPin
 } from 'lucide-react';
+import axios from "axios"
+import inventoryUrl from "../../../inventoryUrl.js"
+import { useAppSelector } from "../../../redux/hooks.js"
 
-const vendors = [
-  {
-    id: 'VND-001',
-    name: 'TechDental Solutions',
-    contact: 'John Smith',
-    email: 'sales@techdental.com',
-    phone: '+1 (555) 123-4567',
-    location: 'San Francisco, CA',
-    products: 45,
-    rating: 4.8,
-    reviews: 124,
-    totalSales: 125400,
-    status: 'active',
-    performance: 94,
-    category: 'Imaging Equipment',
-    joinDate: '2023-01-15'
-  },
-  {
-    id: 'VND-002',
-    name: 'Premium Dental Supply',
-    contact: 'Sarah Johnson',
-    email: 'contact@premiumdental.com',
-    phone: '+1 (555) 987-6543',
-    location: 'Chicago, IL',
-    products: 128,
-    rating: 4.6,
-    reviews: 89,
-    totalSales: 89300,
-    status: 'active',
-    performance: 87,
-    category: 'Surgical Instruments',
-    joinDate: '2023-03-22'
-  },
-  {
-    id: 'VND-003',
-    name: 'DentalCare Products',
-    contact: 'Mike Davis',
-    email: 'info@dentalcare.com',
-    phone: '+1 (555) 456-7890',
-    location: 'New York, NY',
-    products: 289,
-    rating: 4.4,
-    reviews: 156,
-    totalSales: 67200,
-    status: 'active',
-    performance: 82,
-    category: 'Consumables',
-    joinDate: '2022-11-08'
-  },
-  {
-    id: 'VND-004',
-    name: 'Digital Health Systems',
-    contact: 'Lisa Chen',
-    email: 'hello@digitalhealthsys.com',
-    phone: '+1 (555) 321-0987',
-    location: 'Austin, TX',
-    products: 67,
-    rating: 4.9,
-    reviews: 45,
-    totalSales: 156780,
-    status: 'pending',
-    performance: 91,
-    category: 'Digital Solutions',
-    joinDate: '2024-05-12'
-  }
-];
+
+// const vendors = [
+//   {
+//     id: 'VND-001',
+//     name: 'TechDental Solutions',
+//     contact: 'John Smith',
+//     email: 'sales@techdental.com',
+//     phone: '+1 (555) 123-4567',
+//     location: 'San Francisco, CA',
+//     products: 45,
+//     rating: 4.8,
+//     reviews: 124,
+//     totalSales: 125400,
+//     status: 'active',
+//     performance: 94,
+//     category: 'Imaging Equipment',
+//     joinDate: '2023-01-15'
+//   },
+//   {
+//     id: 'VND-002',
+//     name: 'Premium Dental Supply',
+//     contact: 'Sarah Johnson',
+//     email: 'contact@premiumdental.com',
+//     phone: '+1 (555) 987-6543',
+//     location: 'Chicago, IL',
+//     products: 128,
+//     rating: 4.6,
+//     reviews: 89,
+//     totalSales: 89300,
+//     status: 'active',
+//     performance: 87,
+//     category: 'Surgical Instruments',
+//     joinDate: '2023-03-22'
+//   },
+//   {
+//     id: 'VND-003',
+//     name: 'DentalCare Products',
+//     contact: 'Mike Davis',
+//     email: 'info@dentalcare.com',
+//     phone: '+1 (555) 456-7890',
+//     location: 'New York, NY',
+//     products: 289,
+//     rating: 4.4,
+//     reviews: 156,
+//     totalSales: 67200,
+//     status: 'active',
+//     performance: 82,
+//     category: 'Consumables',
+//     joinDate: '2022-11-08'
+//   },
+//   {
+//     id: 'VND-004',
+//     name: 'Digital Health Systems',
+//     contact: 'Lisa Chen',
+//     email: 'hello@digitalhealthsys.com',
+//     phone: '+1 (555) 321-0987',
+//     location: 'Austin, TX',
+//     products: 67,
+//     rating: 4.9,
+//     reviews: 45,
+//     totalSales: 156780,
+//     status: 'pending',
+//     performance: 91,
+//     category: 'Digital Solutions',
+//     joinDate: '2024-05-12'
+//   }
+// ];
+
+interface ContactHistory {
+  date: string;
+  contactMethod: string;
+  contactedBy: number;
+  summary: string;
+  notes: string;
+}
+
+interface Vendor {
+  _id: string;
+  vendorId: string;
+  name: string;
+  companyName: string;
+  email: string;
+  phoneNumber: string;
+  address: string;
+  status: string;
+  rating: string;         // backend gives string
+  performance: string;    // backend gives "74%"
+  productsCount: number;
+  totalRevenue: number;
+  contactHistory: ContactHistory[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+
 
 const vendorStats = [
   { label: 'Total Vendors', value: '89', change: '+5', icon: Users },
@@ -103,6 +136,28 @@ const categories = [
 ];
 
 export function VendorManagement() {
+  const [vendors, setVendor] = useState<Vendor[]>([]);
+
+  const token = useAppSelector((state) => state.auth.token)
+  useEffect(() => {
+    const fetchVendors = async () => {
+      try {
+        const res = await axios.get(`${inventoryUrl}api/v1/vendor/allVendor`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        setVendor(res.data.data)
+        console.log("res", res)
+      } catch (error) {
+        console.log(error)
+      }
+    }
+    fetchVendors()
+  }, [])
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -210,59 +265,59 @@ export function VendorManagement() {
                 </TableHeader>
                 <TableBody>
                   {vendors.map((vendor) => (
-                    <TableRow key={vendor.id}>
+                    <TableRow key={vendor._id}>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-muted-foreground" />
                             <span className="font-medium">{vendor.name}</span>
                           </div>
-                          <p className="text-sm text-muted-foreground">{vendor.category}</p>
-                          <p className="text-xs text-muted-foreground">Joined {vendor.joinDate}</p>
+                          <p className="text-sm text-muted-foreground">{vendor.vendorId}</p>
+                          <p className="text-xs text-muted-foreground">Joined {new Date(vendor.createdAt).toDateString()}</p>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <p className="text-sm font-medium">{vendor.contact}</p>
+                          <p className="text-sm font-medium">{vendor.email}</p>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Mail className="h-3 w-3" />
                             {vendor.email}
                           </div>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Phone className="h-3 w-3" />
-                            {vendor.phone}
+                            {vendor.phoneNumber}
                           </div>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <MapPin className="h-3 w-3" />
-                            {vendor.location}
+                            {vendor.address}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-primary">{vendor.products}</span>
+                        <span className="text-primary">{vendor.productsCount}</span>
                       </TableCell>
                       <TableCell>
                         <span className="text-primary font-medium">
-                          ${vendor.totalSales.toLocaleString()}
+                          ₹{vendor.totalRevenue.toLocaleString()}
                         </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                           <span className="text-sm">{vendor.rating}</span>
-                          <span className="text-xs text-muted-foreground">({vendor.reviews})</span>
+                          {/* <span className="text-xs text-muted-foreground">({vendor.reviews})</span> */}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <span className={`text-sm font-medium ${getPerformanceColor(vendor.performance)}`}>
-                            {vendor.performance}%
+                          <span className={`text-sm font-medium`}>
+                            {vendor.performance}
                           </span>
-                          <Progress value={vendor.performance} className="h-1" />
+                          <Progress value={parseInt(vendor.performance)} className="h-1" />
                         </div>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(vendor.status)}
+                        {getStatusBadge(vendor.status.toLowerCase())}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
@@ -293,22 +348,24 @@ export function VendorManagement() {
               <CardContent>
                 <div className="space-y-4">
                   {vendors
-                    .sort((a, b) => b.performance - a.performance)
+                    .sort((a, b) =>
+                      parseInt(b.performance) - parseInt(a.performance)
+                    )
                     .slice(0, 5)
                     .map((vendor, index) => (
-                      <div key={vendor.id} className="flex items-center justify-between p-3 bg-accent/50 rounded-lg">
+                      <div key={vendor._id} className="flex items-center justify-between p-3 bg-accent/50 rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-medium">
                             {index + 1}
                           </div>
                           <div>
                             <p className="font-medium">{vendor.name}</p>
-                            <p className="text-sm text-muted-foreground">{vendor.category}</p>
+                            {/* <p className="text-sm text-muted-foreground">{vendor.category}</p> */}
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-medium text-primary">{vendor.performance}%</p>
-                          <p className="text-xs text-muted-foreground">${vendor.totalSales.toLocaleString()}</p>
+                          {/* <p className="text-xs text-muted-foreground">${vendor.totalSales.toLocaleString()}</p> */}
                         </div>
                       </div>
                     ))}
@@ -375,7 +432,7 @@ export function VendorManagement() {
                           <h3 className="font-medium">{category.name}</h3>
                           <Badge variant="outline">{category.vendors} vendors</Badge>
                         </div>
-                        
+
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span>Revenue</span>
@@ -388,7 +445,7 @@ export function VendorManagement() {
                             </span>
                           </div>
                         </div>
-                        
+
                         <Button variant="outline" className="w-full">
                           Manage Vendors
                         </Button>
