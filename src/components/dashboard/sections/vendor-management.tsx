@@ -118,6 +118,14 @@ interface Vendor {
   updatedAt: string;
 }
 
+interface VendorCounts {
+  totalVendors: string,
+  activeVendors: string,
+  avgRating: string,
+  totalRevenue: string
+
+}
+
 
 
 const vendorStats = [
@@ -144,9 +152,12 @@ export function VendorManagement() {
       try {
         const res = await axios.get(`${inventoryUrl}api/v1/vendor/allVendor`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+        const vendorcount = await axios.get(`${inventoryUrl}api/v1/vendor/vendorCount`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
           }
         );
         setVendor(res.data.data)
