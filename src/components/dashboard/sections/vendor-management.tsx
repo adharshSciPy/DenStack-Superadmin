@@ -18,7 +18,8 @@ import {
   Edit,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  IndianRupee 
 } from 'lucide-react';
 import axios from "axios"
 import inventoryUrl from "../../../inventoryUrl.js"
@@ -123,28 +124,17 @@ interface VendorCounts {
   activeVendors: string,
   avgRating: string,
   totalRevenue: string
-
 }
 
 
-
-const vendorStats = [
-  { label: 'Total Vendors', value: '89', change: '+5', icon: Users },
-  { label: 'Active Vendors', value: '76', change: '+3', icon: Package },
-  { label: 'Avg Rating', value: '4.6', change: '+0.2', icon: Star },
-  { label: 'Total Revenue', value: '$438K', change: '+18%', icon: DollarSign }
-];
-
-const categories = [
-  { name: 'Imaging Equipment', vendors: 12, revenue: 234500 },
-  { name: 'Surgical Instruments', vendors: 18, revenue: 189300 },
-  { name: 'Consumables', vendors: 28, revenue: 145600 },
-  { name: 'Digital Solutions', vendors: 8, revenue: 298700 },
-  { name: 'Sterilization', vendors: 15, revenue: 89400 }
-];
-
 export function VendorManagement() {
   const [vendors, setVendor] = useState<Vendor[]>([]);
+  const [vendorCounts, setVendorCounts] = useState<VendorCounts>({
+    totalVendors: "0",
+    activeVendors: "0",
+    avgRating: "0",
+    totalRevenue: "0",
+  });
 
   const token = useAppSelector((state) => state.auth.token)
   useEffect(() => {
@@ -155,11 +145,14 @@ export function VendorManagement() {
             headers: { Authorization: `Bearer ${token}` }
           }
         );
-        const vendorcount = await axios.get(`${inventoryUrl}api/v1/vendor/vendorCount`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
+        const vendorCountRes = await axios.get(
+          `${inventoryUrl}api/v1/vendor/vendorCount`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("count", vendorCountRes)
+
+        setVendorCounts(vendorCountRes.data.data);
+
         setVendor(res.data.data)
         console.log("res", res)
       } catch (error) {
@@ -168,6 +161,38 @@ export function VendorManagement() {
     }
     fetchVendors()
   }, [])
+
+  const vendorStats: {
+    label: string;
+    value: string;
+    icon: any;
+    change: string;
+  }[] = [
+      {
+        label: "Total Vendors",
+        value: vendorCounts.totalVendors,
+        icon: Users,
+        change: "+12%",
+      },
+      {
+        label: "Active Vendors",
+        value: vendorCounts.activeVendors,
+        icon: Package,
+        change: "+5%",
+      },
+      {
+        label: "Avg Rating",
+        value: vendorCounts.avgRating,
+        icon: Star,
+        change: "+2%",
+      },
+      {
+        label: "Total Revenue",
+        value: `₹${vendorCounts.totalRevenue}`,
+        icon: IndianRupee,
+        change: "+8%",
+      },
+    ];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -181,6 +206,14 @@ export function VendorManagement() {
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
+
+  const categories = [
+    { name: 'Imaging Equipment', vendors: 12, revenue: 234500 },
+    { name: 'Surgical Instruments', vendors: 18, revenue: 189300 },
+    { name: 'Consumables', vendors: 28, revenue: 145600 },
+    { name: 'Digital Solutions', vendors: 8, revenue: 298700 },
+    { name: 'Sterilization', vendors: 15, revenue: 89400 }
+  ];
 
   const getPerformanceColor = (performance: number) => {
     if (performance >= 90) return 'text-green-600';
@@ -309,7 +342,7 @@ export function VendorManagement() {
                       </TableCell>
                       <TableCell>
                         <span className="text-primary font-medium">
-                          ₹{vendor.totalRevenue.toLocaleString()}
+                          ₹{vendor.totalRevenue}
                         </span>
                       </TableCell>
                       <TableCell>
