@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card.js';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Progress } from '../../ui/progress';
@@ -11,7 +12,6 @@ import {
   Plus,
   Star,
   Package,
-  DollarSign,
   TrendingUp,
   Users,
   Eye,
@@ -19,79 +19,13 @@ import {
   Phone,
   Mail,
   MapPin,
-  IndianRupee 
+  IndianRupee, X
 } from 'lucide-react';
 import axios from "axios"
 import inventoryUrl from "../../../inventoryUrl.js"
 import { useAppSelector } from "../../../redux/hooks.js"
 
 
-// const vendors = [
-//   {
-//     id: 'VND-001',
-//     name: 'TechDental Solutions',
-//     contact: 'John Smith',
-//     email: 'sales@techdental.com',
-//     phone: '+1 (555) 123-4567',
-//     location: 'San Francisco, CA',
-//     products: 45,
-//     rating: 4.8,
-//     reviews: 124,
-//     totalSales: 125400,
-//     status: 'active',
-//     performance: 94,
-//     category: 'Imaging Equipment',
-//     joinDate: '2023-01-15'
-//   },
-//   {
-//     id: 'VND-002',
-//     name: 'Premium Dental Supply',
-//     contact: 'Sarah Johnson',
-//     email: 'contact@premiumdental.com',
-//     phone: '+1 (555) 987-6543',
-//     location: 'Chicago, IL',
-//     products: 128,
-//     rating: 4.6,
-//     reviews: 89,
-//     totalSales: 89300,
-//     status: 'active',
-//     performance: 87,
-//     category: 'Surgical Instruments',
-//     joinDate: '2023-03-22'
-//   },
-//   {
-//     id: 'VND-003',
-//     name: 'DentalCare Products',
-//     contact: 'Mike Davis',
-//     email: 'info@dentalcare.com',
-//     phone: '+1 (555) 456-7890',
-//     location: 'New York, NY',
-//     products: 289,
-//     rating: 4.4,
-//     reviews: 156,
-//     totalSales: 67200,
-//     status: 'active',
-//     performance: 82,
-//     category: 'Consumables',
-//     joinDate: '2022-11-08'
-//   },
-//   {
-//     id: 'VND-004',
-//     name: 'Digital Health Systems',
-//     contact: 'Lisa Chen',
-//     email: 'hello@digitalhealthsys.com',
-//     phone: '+1 (555) 321-0987',
-//     location: 'Austin, TX',
-//     products: 67,
-//     rating: 4.9,
-//     reviews: 45,
-//     totalSales: 156780,
-//     status: 'pending',
-//     performance: 91,
-//     category: 'Digital Solutions',
-//     joinDate: '2024-05-12'
-//   }
-// ];
 
 interface ContactHistory {
   date: string;
@@ -126,6 +60,15 @@ interface VendorCounts {
   totalRevenue: string
 }
 
+interface AddVendorFormData {
+  name: string;
+  companyName: string;
+  email: string;
+  phoneNumber: string;
+  address: string;
+  status: string;
+}
+
 
 export function VendorManagement() {
   const [vendors, setVendor] = useState<Vendor[]>([]);
@@ -136,31 +79,95 @@ export function VendorManagement() {
     totalRevenue: "0",
   });
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [formData, setFormData] = useState<AddVendorFormData>({
+    name: '',
+    companyName: '',
+    email: '',
+    phoneNumber: '',
+    address: '',
+    status: 'Active'
+  });
+
   const token = useAppSelector((state) => state.auth.token)
-  useEffect(() => {
-    const fetchVendors = async () => {
-      try {
-        const res = await axios.get(`${inventoryUrl}api/v1/vendor/allVendor`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
-        const vendorCountRes = await axios.get(
-          `${inventoryUrl}api/v1/vendor/vendorCount`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        console.log("count", vendorCountRes)
+  const fetchVendors = async () => {
+    try {
+      const res = await axios.get(`${inventoryUrl}api/v1/vendor/allVendor`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      const vendorCountRes = await axios.get(
+        `${inventoryUrl}api/v1/vendor/vendorCount`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      console.log("count", vendorCountRes)
 
-        setVendorCounts(vendorCountRes.data.data);
+      setVendorCounts(vendorCountRes.data.data);
 
-        setVendor(res.data.data)
-        console.log("res", res)
-      } catch (error) {
-        console.log(error)
-      }
+      setVendor(res.data.data)
+      console.log("res", res)
+    } catch (error) {
+      console.log(error)
     }
+  }
+  useEffect(() => {
     fetchVendors()
-  }, [])
+  }, [token])
+
+
+
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSelectChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      status: value
+    }));
+  };
+
+  const handleSubmit = async () => {
+    // Validate required fields
+    if (!formData.name || !formData.companyName || !formData.email ||
+      !formData.phoneNumber || !formData.address) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      console.log(token)
+      console.log("form", formData)
+      await axios.post(`${inventoryUrl}api/v1/vendor/createVendor`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Refresh the vendors list
+      await fetchVendors();
+
+      // Reset form and close modal
+      setFormData({
+        name: '',
+        companyName: '',
+        email: '',
+        phoneNumber: '',
+        address: '',
+        status: 'Active'
+      });
+      setIsAddModalOpen(false);
+      alert('Vendor Added Successfully');
+
+    } catch (error) {
+      console.log('Error adding vendor:', error);
+      alert('Failed to add vendor. Please try again.');
+    }
+  };
 
   const vendorStats: {
     label: string;
@@ -236,10 +243,294 @@ export function VendorManagement() {
             <TrendingUp className="w-4 h-4 mr-2" />
             Performance Report
           </Button>
-          <Button size="sm">
-            <Plus className="w-4 h-4 mr-2" />
+
+          {/* Add Vendor Modal */}
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '8px 16px',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: 'white',
+              backgroundColor: 'rgba(112, 53, 160, 1)',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(112, 53, 160, 1)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(112, 53, 160, 1)'}
+          >
+            <Plus style={{ width: '16px', height: '16px', marginRight: '8px' }} />
             Add Vendor
-          </Button>
+          </button>
+          {/* Modal Overlay */}
+          {isAddModalOpen && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: '0',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '16px'
+              }}
+              onClick={() => setIsAddModalOpen(false)}
+            >
+              {/* Modal Content */}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                  maxWidth: '672px',
+                  width: '100%',
+                  maxHeight: '90vh',
+                  overflow: 'auto',
+                  position: 'relative'
+                }}
+              >
+                {/* Modal Header */}
+                <div style={{ padding: '24px 24px 16px 24px', borderBottom: '1px solid #e5e7eb' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: '0 0 4px 0' }}>
+                        Add New Vendor
+                      </h2>
+                      <p style={{ fontSize: '14px', color: '#6b7280', margin: '0' }}>
+                        Enter vendor details to register a new supplier
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setIsAddModalOpen(false)}
+                      style={{
+                        padding: '4px',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        color: '#6b7280',
+                        transition: 'color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#111827'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
+                    >
+                      <X style={{ width: '20px', height: '20px' }} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Body */}
+                <div style={{ padding: '24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                    {/* Vendor Name */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label htmlFor="name" style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        Vendor Name *
+                      </label>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        placeholder="Enter vendor name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: '14px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          outline: 'none',
+                          transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                      />
+                    </div>
+
+                    {/* Company Name */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label htmlFor="companyName" style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        Company Name *
+                      </label>
+                      <input
+                        id="companyName"
+                        name="companyName"
+                        type="text"
+                        placeholder="Enter company name"
+                        value={formData.companyName}
+                        onChange={handleInputChange}
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: '14px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          outline: 'none',
+                          transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                      />
+                    </div>
+
+                    {/* Email */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label htmlFor="email" style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        Email *
+                      </label>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="vendor@example.com"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: '14px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          outline: 'none',
+                          transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                      />
+                    </div>
+
+                    {/* Phone Number */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label htmlFor="phoneNumber" style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        Phone Number *
+                      </label>
+                      <input
+                        id="phoneNumber"
+                        name="phoneNumber"
+                        type="tel"
+                        placeholder="+91 98765 43210"
+                        value={formData.phoneNumber}
+                        onChange={handleInputChange}
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: '14px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          outline: 'none',
+                          transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                      />
+                    </div>
+
+                    {/* Status */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label htmlFor="status" style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        Status
+                      </label>
+                      <select
+                        id="status"
+                        value={formData.status}
+                        onChange={(e) => handleSelectChange(e.target.value)}
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: '14px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          outline: 'none',
+                          backgroundColor: 'white',
+                          cursor: 'pointer',
+                          transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">InActive</option>
+                        <option value="Pending">Pending</option>
+                      </select>
+                    </div>
+
+                    {/* Address - Full Width */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', gridColumn: 'span 2' }}>
+                      <label htmlFor="address" style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                        Address *
+                      </label>
+                      <textarea
+                        id="address"
+                        name="address"
+                        placeholder="Enter complete address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        rows={3}
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: '14px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          outline: 'none',
+                          resize: 'vertical',
+                          fontFamily: 'inherit',
+                          transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#2563eb'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Footer Buttons */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #e5e7eb' }}>
+                    <button
+                      onClick={() => setIsAddModalOpen(false)}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: '#374151',
+                        backgroundColor: 'white',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleSubmit()}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: 'white',
+                        backgroundColor: '#ac66e6ff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(112, 53, 160, 1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(112, 53, 160, 1)'}
+                    >
+                      <Plus style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                      Add Vendor
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
