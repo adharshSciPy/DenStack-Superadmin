@@ -71,6 +71,8 @@ interface AddVendorFormData {
 
 
 export function VendorManagement() {
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
   const [vendors, setVendor] = useState<Vendor[]>([]);
   const [vendorCounts, setVendorCounts] = useState<VendorCounts>({
     totalVendors: "0",
@@ -227,6 +229,27 @@ export function VendorManagement() {
     if (performance >= 80) return 'text-yellow-600';
     return 'text-red-600';
   };
+
+  const filteredVendors = Array.isArray(vendors) ? vendors.filter((vendor) => {
+    // Search filter
+    const matchesSearch = !searchQuery.trim() || (() => {
+      const query = searchQuery.toLowerCase();
+      return (
+        (vendor.name?.toLowerCase() || '').includes(query) ||
+        (vendor.companyName?.toLowerCase() || '').includes(query) ||
+        (vendor.email?.toLowerCase() || '').includes(query) ||
+        (vendor.phoneNumber?.toLowerCase() || '').includes(query) ||
+        (vendor.address?.toLowerCase() || '').includes(query) ||
+        (vendor.vendorId?.toLowerCase() || '').includes(query)
+      );
+    })();
+
+    // Status filter
+    const matchesStatus = statusFilter === 'All' ||
+      vendor.status?.toLowerCase() === statusFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus;
+  }) : [];
 
   return (
     <div className="space-y-6">
@@ -569,11 +592,31 @@ export function VendorManagement() {
                 <div className="flex-1 min-w-[300px]">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search vendors by name, category, or contact..." className="pl-10" />
+                    <Input placeholder="Search vendors by name, category, or contact..." className="pl-10"
+                      value={searchQuery}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)} />
                   </div>
                 </div>
-                <Button variant="outline">Filter by Category</Button>
-                <Button variant="outline">Filter by Status</Button>
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    backgroundColor: 'white',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="All">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Pending">Pending</option>
+                </select>
               </div>
             </CardContent>
           </Card>
@@ -599,7 +642,7 @@ export function VendorManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {vendors.map((vendor) => (
+                  {filteredVendors.map((vendor) => (
                     <TableRow key={vendor._id}>
                       <TableCell>
                         <div className="space-y-1">
@@ -682,7 +725,7 @@ export function VendorManagement() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {vendors
+                  {filteredVendors
                     .sort((a, b) =>
                       parseInt(b.performance) - parseInt(a.performance)
                     )
