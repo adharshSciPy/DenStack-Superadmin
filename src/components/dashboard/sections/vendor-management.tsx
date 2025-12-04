@@ -22,7 +22,7 @@ import {
   IndianRupee, X
 } from 'lucide-react';
 import axios from "axios"
-import inventoryUrl from "../../../inventoryUrl.js"
+import BASE_URLS from '../../../inventoryUrl.js';
 import { useAppSelector } from "../../../redux/hooks.js"
 
 
@@ -94,13 +94,13 @@ export function VendorManagement() {
   const token = useAppSelector((state) => state.auth.token)
   const fetchVendors = async () => {
     try {
-      const res = await axios.get(`${inventoryUrl}api/v1/vendor/allVendor`,
+      const res = await axios.get(`${BASE_URLS.INVENTORY}api/v1/vendor/allVendor`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
       const vendorCountRes = await axios.get(
-        `${inventoryUrl}api/v1/vendor/vendorCount`,
+        `${BASE_URLS.INVENTORY}api/v1/vendor/vendorCount`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       console.log("count", vendorCountRes)
@@ -146,7 +146,7 @@ export function VendorManagement() {
     try {
       console.log(token)
       console.log("form", formData)
-      await axios.post(`${inventoryUrl}api/v1/vendor/createVendor`, formData, {
+      await axios.post(`${BASE_URLS.INVENTORY}api/v1/vendor/createVendor`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

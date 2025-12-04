@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import axios from "axios";
-import inventoryUrl from '../../../inventoryUrl.js';
+import BASE_URLS from '../../../inventoryUrl.js';
 import { useAppSelector } from "../../../redux/hooks.js";
 
 interface Product {
@@ -63,7 +63,7 @@ export function EcommerceMarketplace() {
   const fetchProducts = async () => {
     try {
       console.log("token", token)
-      const productDetails = await axios.get(`${inventoryUrl}api/v1/product/productsDetails`, {
+      const productDetails = await axios.get(`${BASE_URLS.INVENTORY}api/v1/product/productsDetails`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -192,7 +192,7 @@ export function EcommerceMarketplace() {
                         <img
                           src={
                             product.image?.[0]
-                              ? `${inventoryUrl}${product.image[0]}`
+                              ? `${BASE_URLS.INVENTORY}${product.image[0]}`
                               : "/placeholder.png"
                           }
                           alt={product.name}

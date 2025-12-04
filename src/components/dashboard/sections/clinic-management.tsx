@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
@@ -7,14 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { Switch } from '../../ui/switch';
-import { 
-  Search, 
-  Filter, 
-  Building2, 
-  Users, 
-  Calendar,
+import {
+  Search,
+  Filter,
+  Building2,
+  Users,
+  ShieldX,
   MapPin,
-  Phone,
+  Hotel,
   Mail,
   Eye,
   Edit,
@@ -22,9 +22,19 @@ import {
   Plus,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
+  Hospital
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../ui/dropdown-menu';
+import { useAppSelector } from "../../../redux/hooks.js"
+import axios from 'axios';
+import BASE_URLS from "../../../inventoryUrl.js";
+
+interface ClinicCount {
+  totalClinics: number,
+  activeClinics: number,
+  expiredClinics: number
+}
 
 const clinicsData = [
   {
@@ -93,8 +103,54 @@ const subscriptionPlans = [
 ];
 
 export function ClinicManagement() {
+  const [clinicCounts, setClinicCounts] = useState<ClinicCount>({
+    totalClinics: 0,
+    activeClinics: 0,
+    expiredClinics: 0
+  });
+
   const [selectedClinics, setSelectedClinics] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const token = useAppSelector((state) => state.auth.token)
+  const fetchClinic = async () => {
+    try {
+      const countRes = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/clinic/clicnicCount`)
+      console.log("countClinic", countRes)
+      console.log("data", clinicCounts)
+
+
+      setClinicCounts(countRes.data.data)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  useEffect(() => {
+    fetchClinic()
+  }, [token])
+
+  const clinicStats = [
+    {
+      label: "Total Clinics",
+      value: clinicCounts.totalClinics,
+      icon: Building2,
+      color: "text-primary"
+    },
+    {
+      label: "Active Clinics",
+      value: clinicCounts.activeClinics,
+      icon: CheckCircle,
+      color: "text-green-500"
+    },
+    {
+      label: "Expired Clinics",
+      value: clinicCounts.expiredClinics,
+      icon: AlertTriangle,
+      color: "text-red-500"
+    }
+  ];
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -146,57 +202,20 @@ export function ClinicManagement() {
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm">Total Clinics</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <span className="text-2xl text-primary">176</span>
-              <p className="text-xs text-muted-foreground">+12 this month</p>
-            </div>
-          </CardContent>
-        </Card>
+        {clinicStats.map((stat, index) => (
+          <Card key={index}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm">{stat.label}</CardTitle>
+              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+            </CardHeader>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm">Active Clinics</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <span className="text-2xl text-primary">145</span>
-              <p className="text-xs text-muted-foreground">82.4% of total</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm">Expired</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <span className="text-2xl text-primary">8</span>
-              <p className="text-xs text-muted-foreground">Needs attention</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm">Trial Period</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <span className="text-2xl text-primary">23</span>
-              <p className="text-xs text-muted-foreground">Conversion pending</p>
-            </div>
-          </CardContent>
-        </Card>
+            <CardContent>
+              <div className="space-y-1">
+                <span className="text-2xl text-primary">{stat.value}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Main Content */}
@@ -215,8 +234,8 @@ export function ClinicManagement() {
                 <div className="flex-1 min-w-[300px]">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search clinics by name, location, or email..." 
+                    <Input
+                      placeholder="Search clinics by name, location, or email..."
                       className="pl-10"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -393,7 +412,7 @@ export function ClinicManagement() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <h3 className="font-medium">Bulk Actions</h3>
                   <div className="space-y-2">
