@@ -69,6 +69,13 @@ interface AddVendorFormData {
   status: string;
 }
 
+interface VendorCategory {
+  categoryName: string,
+  vendors: number,
+  revenue: number,
+  avgPerVendor: number
+}
+
 
 export function VendorManagement() {
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -90,6 +97,7 @@ export function VendorManagement() {
     address: '',
     status: 'Active'
   });
+  const [vendorCategories, setVendorCategories] = useState<VendorCategory[]>([])
 
   const token = useAppSelector((state) => state.auth.token)
   const fetchVendors = async () => {
@@ -103,12 +111,22 @@ export function VendorManagement() {
         `${BASE_URLS.INVENTORY}api/v1/vendor/vendorCount`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log("count", vendorCountRes)
-
+      const vendorCategory = await axios.get(`${BASE_URLS.INVENTORY}api/v1/vendor/category-analytics`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+      const formatted = vendorCategory.data.data.map((item: any) => ({
+        categoryName: item.categoryName,
+        vendors: item.vendors,
+        revenue: item.revenue,
+        avgPerVendor: item.avgPerVendor
+      }));
+      setVendorCategories(formatted)
       setVendorCounts(vendorCountRes.data.data);
-
       setVendor(res.data.data)
-      console.log("res", res)
     } catch (error) {
       console.log(error)
     }
@@ -215,14 +233,6 @@ export function VendorManagement() {
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
-
-  const categories = [
-    { name: 'Imaging Equipment', vendors: 12, revenue: 234500 },
-    { name: 'Surgical Instruments', vendors: 18, revenue: 189300 },
-    { name: 'Consumables', vendors: 28, revenue: 145600 },
-    { name: 'Digital Solutions', vendors: 8, revenue: 298700 },
-    { name: 'Sterilization', vendors: 15, revenue: 89400 }
-  ];
 
   const getPerformanceColor = (performance: number) => {
     if (performance >= 90) return 'text-green-600';
@@ -802,12 +812,12 @@ export function VendorManagement() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {categories.map((category) => (
-                  <Card key={category.name} className="hover:shadow-md transition-shadow">
+                {vendorCategories.map((category) => (
+                  <Card key={category.categoryName} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{category.name}</h3>
+                          <h3 className="font-medium">{category.categoryName}</h3>
                           <Badge variant="outline">{category.vendors} vendors</Badge>
                         </div>
 
