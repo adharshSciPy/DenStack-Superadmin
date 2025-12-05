@@ -36,64 +36,57 @@ interface ClinicCount {
   expiredClinics: number
 }
 
-const clinicsData = [
-  {
-    id: 1,
-    name: 'SmileCare Dental Center',
-    location: 'New York, NY',
-    status: 'Active',
-    subscription: 'Premium',
-    users: 24,
-    lastActive: '2 hours ago',
-    joinDate: '2024-01-15',
-    revenue: 2450,
-    phone: '+1 (555) 123-4567',
-    email: 'admin@smilecare.com',
-    expiryDate: '2024-12-15'
-  },
-  {
-    id: 2,
-    name: 'Dental Care Plus',
-    location: 'Los Angeles, CA',
-    status: 'Expired',
-    subscription: 'Standard',
-    users: 18,
-    lastActive: '5 days ago',
-    joinDate: '2023-08-22',
-    revenue: 1890,
-    phone: '+1 (555) 987-6543',
-    email: 'contact@dentalcareplus.com',
-    expiryDate: '2024-08-22'
-  },
-  {
-    id: 3,
-    name: 'Elite Orthodontics',
-    location: 'Chicago, IL',
-    status: 'Active',
-    subscription: 'Enterprise',
-    users: 42,
-    lastActive: '1 hour ago',
-    joinDate: '2023-11-03',
-    revenue: 3680,
-    phone: '+1 (555) 456-7890',
-    email: 'info@eliteortho.com',
-    expiryDate: '2024-11-03'
-  },
-  {
-    id: 4,
-    name: 'Family Dental Group',
-    location: 'Houston, TX',
-    status: 'Trial',
-    subscription: 'Trial',
-    users: 8,
-    lastActive: '30 minutes ago',
-    joinDate: '2024-06-01',
-    revenue: 0,
-    phone: '+1 (555) 321-0987',
-    email: 'hello@familydental.com',
-    expiryDate: '2024-07-01'
-  }
-];
+
+interface ClinicData {
+  _id: string;
+  name: string;
+  type: string;
+  email: string;
+  phoneNumber: number;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zip: string;
+  };
+  description: string;
+  theme: {
+    startColor: string;
+    endColor: string;
+    primaryForeground: string;
+    sidebarForeground: string;
+    secondary: string;
+  };
+  role: string;
+  subscription: {
+    package: string;
+    type: string;
+    price: number;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+    nextBillingDate: string;
+  };
+  isActive: boolean;
+  isMultipleClinic: boolean;
+  isOwnLab: boolean;
+  staffsCount: {
+    nurses: number;
+    receptionists: number;
+    pharmacists: number;
+    accountants: number;
+    technicians: number;
+    total: number;
+  };
+  lastActiveAgo: string;
+}
+
+interface ClinicSubscriptionStats {
+  plan: string,
+  count: number
+}
+
 
 const subscriptionPlans = [
   { name: 'Trial', color: 'bg-yellow-500', count: 23 },
@@ -108,18 +101,22 @@ export function ClinicManagement() {
     activeClinics: 0,
     expiredClinics: 0
   });
+  const [clinicsData, setClinicData] = useState<ClinicData[]>([]);
 
   const [selectedClinics, setSelectedClinics] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [clinicSubsStats, setClinicSubsStats] = useState<ClinicSubscriptionStats[]>([])
 
   const token = useAppSelector((state) => state.auth.token)
   const fetchClinic = async () => {
     try {
       const countRes = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/clinic/clicnicCount`)
-      console.log("countClinic", countRes)
-      console.log("data", clinicCounts)
+      const res = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/clinic/allClinicsStatus`);
+      const resStats = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/clinic/clinicSubscriptionCount`);
 
-
+      console.log("Clinic Response:", resStats);
+      setClinicData(res.data.data)
+      setClinicSubsStats(resStats.data.data)
       setClinicCounts(countRes.data.data)
     } catch (error) {
       console.log(error)
@@ -283,14 +280,13 @@ export function ClinicManagement() {
                     <TableHead>Status</TableHead>
                     <TableHead>Subscription</TableHead>
                     <TableHead>Users</TableHead>
-                    <TableHead>Revenue</TableHead>
                     <TableHead>Last Active</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {clinicsData.map((clinic) => (
-                    <TableRow key={clinic.id}>
+                    <TableRow key={clinic._id}>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
@@ -300,7 +296,7 @@ export function ClinicManagement() {
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
-                              {clinic.location}
+                              {clinic.address?.city}, {clinic.address?.state}
                             </div>
                             <div className="flex items-center gap-1">
                               <Mail className="h-3 w-3" />
@@ -311,24 +307,28 @@ export function ClinicManagement() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(clinic.status)}
-                          {getStatusBadge(clinic.status)}
+                          <Badge className={clinic.isActive ? "bg-green-500" : "bg-red-500"}>
+                            {clinic.isActive ? "Active" : "Inactive"}
+                          </Badge>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{clinic.subscription}</Badge>
+                        <Badge variant="outline">
+                          {clinic.subscription?.package
+                            ? clinic.subscription.package.charAt(0).toUpperCase() +
+                            clinic.subscription.package.slice(1)
+                            : "N/A"}
+                        </Badge>
+
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Users className="h-3 w-3" />
-                          {clinic.users}
+                          {clinic.staffsCount?.total || 0}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-primary">${clinic.revenue.toLocaleString()}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">{clinic.lastActive}</span>
+                        <span className="text-sm text-muted-foreground">{clinic.lastActiveAgo}</span>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -372,11 +372,11 @@ export function ClinicManagement() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {subscriptionPlans.map((plan) => (
-                  <Card key={plan.name} className="text-center">
+                {clinicSubsStats.map((plan) => (
+                  <Card key={plan.plan} className="text-center">
                     <CardContent className="p-6">
-                      <div className={`w-4 h-4 ${plan.color} rounded-full mx-auto mb-2`}></div>
-                      <h3 className="font-medium">{plan.name}</h3>
+                      <div className={`w-4 h-4 ${plan.count} rounded-full mx-auto mb-2`}></div>
+                      <h3 className="font-medium">{plan.plan.charAt(0).toUpperCase() + plan.plan.slice(1)}</h3>
                       <p className="text-2xl text-primary mt-2">{plan.count}</p>
                       <p className="text-sm text-muted-foreground">clinics</p>
                     </CardContent>
