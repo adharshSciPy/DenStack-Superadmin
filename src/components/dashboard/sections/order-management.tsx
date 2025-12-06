@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
@@ -6,11 +6,11 @@ import { Input } from '../../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { 
-  Search, 
-  Package, 
-  Truck, 
-  CheckCircle, 
+import {
+  Search,
+  Package,
+  Truck,
+  CheckCircle,
   Clock,
   AlertCircle,
   Eye,
@@ -19,6 +19,9 @@ import {
   Download,
   Calendar
 } from 'lucide-react';
+import axios from 'axios';
+import BASE_URLS from '../../../inventoryUrl.js';
+import { useAppSelector } from "../../../redux/hooks.js"
 
 const orders = [
   {
@@ -79,16 +82,58 @@ const orders = [
   }
 ];
 
-const orderStats = [
-  { label: 'Total Orders', value: '1,247', change: '+23', icon: Package },
-  { label: 'In Transit', value: '45', change: '+5', icon: Truck },
-  { label: 'Delivered', value: '1,156', change: '+18', icon: CheckCircle },
-  { label: 'Pending', value: '46', change: '-2', icon: Clock }
-];
+
+interface OrderStats {
+  totalOrders: number,
+  processing: number,
+  shipped: number,
+  delivered: number,
+  cancelled: number
+}
 
 export function OrderManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [orderStats, setOrderStats] = useState<OrderStats>({
+    totalOrders: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0
+  })
+
+  const token = useAppSelector((state) => state.auth.token)
+  const fetchOrders = async () => {
+    try {
+      const statsRes = await axios.get(`${BASE_URLS.INVENTORY}api/v1/order/orderStats`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      const response = await axios.get(`${BASE_URLS.INVENTORY}api/v1/order/recentOrders`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      )
+      setOrderStats(statsRes.data.stats)
+      console.log("response", response);
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  useEffect(() => {
+    fetchOrders()
+  }, [token])
+
+  const computedStats = [
+    { label: "Total Orders", value: orderStats.totalOrders, icon: Package },
+    { label: "Processing", value: orderStats.processing, icon: RefreshCw },
+    { label: "Shipped", value: orderStats.shipped, icon: Truck },
+    { label: "Delivered", value: orderStats.delivered, icon: CheckCircle },
+    { label: "Cancelled", value: orderStats.cancelled, icon: AlertCircle },
+  ];
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -161,7 +206,7 @@ export function OrderManagement() {
 
       {/* Order Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {orderStats.map((stat) => (
+        {computedStats.map((stat) => (
           <Card key={stat.label}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">{stat.label}</CardTitle>
@@ -170,7 +215,6 @@ export function OrderManagement() {
             <CardContent>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl text-primary">{stat.value}</span>
-                <Badge className="bg-secondary text-secondary-foreground">{stat.change}</Badge>
               </div>
             </CardContent>
           </Card>
@@ -193,8 +237,8 @@ export function OrderManagement() {
                 <div className="flex-1 min-w-[300px]">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search orders by ID, clinic, or product..." 
+                    <Input
+                      placeholder="Search orders by ID, clinic, or product..."
                       className="pl-10"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -340,24 +384,24 @@ export function OrderManagement() {
                           <p className="text-sm text-muted-foreground">Expected: {order.deliveryDate}</p>
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-sm">Order Status</span>
                           {getStatusBadge(order.status)}
                         </div>
-                        
+
                         <div className="w-full bg-accent rounded-full h-2">
-                          <div 
-                            className="bg-primary h-2 rounded-full transition-all duration-500" 
-                            style={{ 
-                              width: order.status === 'processing' ? '25%' : 
-                                     order.status === 'in-transit' ? '75%' : 
-                                     order.status === 'delivered' ? '100%' : '0%'
+                          <div
+                            className="bg-primary h-2 rounded-full transition-all duration-500"
+                            style={{
+                              width: order.status === 'processing' ? '25%' :
+                                order.status === 'in-transit' ? '75%' :
+                                  order.status === 'delivered' ? '100%' : '0%'
                             }}
                           ></div>
                         </div>
-                        
+
                         <div className="flex justify-between text-xs text-muted-foreground">
                           <span>Order Placed</span>
                           <span>Processing</span>
