@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../ui/dropdown-menu';
 import { useAppSelector } from "../../../redux/hooks.js"
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import BASE_URLS from "../../../inventoryUrl.js";
 
 interface ClinicCount {
@@ -87,6 +87,20 @@ interface ClinicSubscriptionStats {
   count: number
 }
 
+interface ClinicType {
+  _id: string;
+  name: string;
+  email?: string;
+  address?: string;
+  isActive: boolean;   // stored clinic status
+}
+
+interface ClinicStatusResponse {
+  message: string;
+  isActive: boolean;   // updated status from backend
+}
+
+
 
 const subscriptionPlans = [
   { name: 'Trial', color: 'bg-yellow-500', count: 23 },
@@ -106,6 +120,10 @@ export function ClinicManagement() {
   const [selectedClinics, setSelectedClinics] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [clinicSubsStats, setClinicSubsStats] = useState<ClinicSubscriptionStats[]>([])
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [subscriptionFilter, setSubscriptionFilter] = useState("all");
+
+
 
   const token = useAppSelector((state) => state.auth.token)
   const fetchClinic = async () => {
@@ -114,7 +132,7 @@ export function ClinicManagement() {
       const res = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/clinic/allClinicsStatus`);
       const resStats = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/clinic/clinicSubscriptionCount`);
 
-      console.log("Clinic Response:", resStats);
+
       setClinicData(res.data.data)
       setClinicSubsStats(resStats.data.data)
       setClinicCounts(countRes.data.data)
@@ -174,6 +192,64 @@ export function ClinicManagement() {
         return null;
     }
   };
+
+  const statusUpdate = async (clinicId: string) => {
+    try {
+      const res = await axios.patch<ClinicStatusResponse>(
+        `${BASE_URLS.AUTH}api/v1/auth/clinic/toggleClinicAccess/${clinicId}`
+      );
+
+      const { isActive } = res.data;
+
+      // 🔥 Update UI instantly without refresh
+      setClinicData(prev =>
+        prev.map(clinic =>
+          clinic._id === clinicId
+            ? { ...clinic, isActive }
+            : clinic
+        )
+      );
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const filteredClinics = clinicsData.filter((clinic) => {
+    const search = searchTerm.toLowerCase();
+
+    const name = clinic.name?.toLowerCase() || "";
+    const email = clinic.email?.toLowerCase() || "";
+    const city = clinic.address?.city?.toLowerCase() || "";
+    const state = clinic.address?.state?.toLowerCase() || "";
+
+    const matchesSearch =
+      name.includes(search) ||
+      email.includes(search) ||
+      city.includes(search) ||
+      state.includes(search);
+
+
+    // Status Filter
+    const matchesStatus =
+      statusFilter === "all"
+        ? true
+        : statusFilter === "active"
+          ? clinic.isActive === true
+          : clinic.isActive === false;
+
+    // Subscription filter
+    const sub = clinic.subscription?.package?.toLowerCase() || "";
+    const matchesSubscription =
+      subscriptionFilter === "all"
+        ? true
+        : sub === subscriptionFilter;
+
+    return matchesSearch && matchesStatus && matchesSubscription;
+  });
+
+
+
 
   return (
     <div className="space-y-6">
@@ -239,29 +315,29 @@ export function ClinicManagement() {
                     />
                   </div>
                 </div>
-                <Select>
+                <Select onValueChange={(value: string) => setStatusFilter(value)}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="expired">Expired</SelectItem>
-                    <SelectItem value="trial">Trial</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select>
+
+                <Select onValueChange={(value: string) => setSubscriptionFilter(value)}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Subscription" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Plans</SelectItem>
-                    <SelectItem value="trial">Trial</SelectItem>
+                    <SelectItem value="basic">Basic</SelectItem>
                     <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="premium">Premium</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                    <SelectItem value="starter">Starter</SelectItem>
                   </SelectContent>
                 </Select>
+
               </div>
             </CardContent>
           </Card>
@@ -285,7 +361,7 @@ export function ClinicManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clinicsData.map((clinic) => (
+                  {filteredClinics.map((clinic) => (
                     <TableRow key={clinic._id}>
                       <TableCell>
                         <div className="space-y-1">
@@ -332,11 +408,9 @@ export function ClinicManagement() {
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
+                          <Button size="sm" onClick={() => { statusUpdate(clinic._id) }}>
+                            Status Update
+                          </Button>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>
                               <Eye className="mr-2 h-4 w-4" />
