@@ -23,64 +23,64 @@ import axios from 'axios';
 import BASE_URLS from '../../../inventoryUrl.js';
 import { useAppSelector } from "../../../redux/hooks.js"
 
-const orders = [
-  {
-    id: 'ORD-2024-001',
-    clinic: 'SmileCare Dental Center',
-    items: [
-      { name: 'Digital X-Ray Sensor', qty: 2, price: 2499 },
-      { name: 'Composite Filling Material', qty: 5, price: 149 }
-    ],
-    total: 5743,
-    status: 'delivered',
-    orderDate: '2024-06-15',
-    deliveryDate: '2024-06-18',
-    vendor: 'TechDental Solutions',
-    priority: 'standard'
-  },
-  {
-    id: 'ORD-2024-002',
-    clinic: 'Elite Orthodontics',
-    items: [
-      { name: 'Dental Implant Kit', qty: 3, price: 899 },
-      { name: 'Surgical Instruments Set', qty: 1, price: 1299 }
-    ],
-    total: 3996,
-    status: 'in-transit',
-    orderDate: '2024-06-20',
-    deliveryDate: '2024-06-23',
-    vendor: 'Premium Dental Supply',
-    priority: 'urgent'
-  },
-  {
-    id: 'ORD-2024-003',
-    clinic: 'Family Dental Group',
-    items: [
-      { name: 'Sterilization Pouches', qty: 10, price: 25 },
-      { name: 'Disposable Gloves', qty: 20, price: 15 }
-    ],
-    total: 550,
-    status: 'pending',
-    orderDate: '2024-06-22',
-    deliveryDate: '2024-06-25',
-    vendor: 'DentalCare Products',
-    priority: 'standard'
-  },
-  {
-    id: 'ORD-2024-004',
-    clinic: 'Modern Dentistry',
-    items: [
-      { name: 'Intraoral Camera', qty: 1, price: 1899 },
-      { name: 'LED Curing Light', qty: 2, price: 299 }
-    ],
-    total: 2497,
-    status: 'processing',
-    orderDate: '2024-06-23',
-    deliveryDate: '2024-06-26',
-    vendor: 'TechDental Solutions',
-    priority: 'high'
-  }
-];
+// const orders = [
+//   {
+//     id: 'ORD-2024-001',
+//     clinic: 'SmileCare Dental Center',
+//     items: [
+//       { name: 'Digital X-Ray Sensor', qty: 2, price: 2499 },
+//       { name: 'Composite Filling Material', qty: 5, price: 149 }
+//     ],
+//     total: 5743,
+//     status: 'delivered',
+//     orderDate: '2024-06-15',
+//     deliveryDate: '2024-06-18',
+//     vendor: 'TechDental Solutions',
+//     priority: 'standard'
+//   },
+//   {
+//     id: 'ORD-2024-002',
+//     clinic: 'Elite Orthodontics',
+//     items: [
+//       { name: 'Dental Implant Kit', qty: 3, price: 899 },
+//       { name: 'Surgical Instruments Set', qty: 1, price: 1299 }
+//     ],
+//     total: 3996,
+//     status: 'in-transit',
+//     orderDate: '2024-06-20',
+//     deliveryDate: '2024-06-23',
+//     vendor: 'Premium Dental Supply',
+//     priority: 'urgent'
+//   },
+//   {
+//     id: 'ORD-2024-003',
+//     clinic: 'Family Dental Group',
+//     items: [
+//       { name: 'Sterilization Pouches', qty: 10, price: 25 },
+//       { name: 'Disposable Gloves', qty: 20, price: 15 }
+//     ],
+//     total: 550,
+//     status: 'pending',
+//     orderDate: '2024-06-22',
+//     deliveryDate: '2024-06-25',
+//     vendor: 'DentalCare Products',
+//     priority: 'standard'
+//   },
+//   {
+//     id: 'ORD-2024-004',
+//     clinic: 'Modern Dentistry',
+//     items: [
+//       { name: 'Intraoral Camera', qty: 1, price: 1899 },
+//       { name: 'LED Curing Light', qty: 2, price: 299 }
+//     ],
+//     total: 2497,
+//     status: 'processing',
+//     orderDate: '2024-06-23',
+//     deliveryDate: '2024-06-26',
+//     vendor: 'TechDental Solutions',
+//     priority: 'high'
+//   }
+// ];
 
 
 interface OrderStats {
@@ -91,9 +91,37 @@ interface OrderStats {
   cancelled: number
 }
 
+export interface OrderItem {
+  name: string;
+  quantity: number;
+}
+
+export interface OrderData {
+  _id: string;
+  orderId: string;
+  date: string;
+  clinic: string;
+  items: OrderItem[];
+  totalAmount: number;
+  orderStatus: "PROCESSING" | "DELIVERED" | "CANCELLED" | "SHIPPED";
+  priority: string;
+}
+
+export const formatDate = (isoString: string): string => {
+  const date = new Date(isoString);
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months start at 0
+  const year = date.getFullYear();
+
+  return `${day}-${month}-${year}`;
+};
+
+
+
 export function OrderManagement() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [orderStats, setOrderStats] = useState<OrderStats>({
     totalOrders: 0,
     processing: 0,
@@ -101,6 +129,10 @@ export function OrderManagement() {
     delivered: 0,
     cancelled: 0
   })
+
+  const [orders, setOrders] = useState<OrderData[]>([])
+  const [priorityFilter, setPriorityFilter] = useState("All");
+
 
   const token = useAppSelector((state) => state.auth.token)
   const fetchOrders = async () => {
@@ -115,7 +147,9 @@ export function OrderManagement() {
           headers: { Authorization: `Bearer ${token}` }
         }
       )
+
       setOrderStats(statsRes.data.stats)
+      setOrders(response.data.data)
       console.log("response", response);
     } catch (error) {
       console.log(error)
@@ -137,15 +171,13 @@ export function OrderManagement() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'delivered':
+      case 'DELIVERED':
         return <Badge className="bg-secondary text-secondary-foreground">Delivered</Badge>;
-      case 'in-transit':
-        return <Badge className="bg-primary text-primary-foreground">In Transit</Badge>;
-      case 'processing':
+      case 'SHIPPED':
+        return <Badge className="bg-primary text-primary-foreground">Shipped</Badge>;
+      case 'PROCESSING':
         return <Badge className="bg-accent text-accent-foreground">Processing</Badge>;
-      case 'pending':
-        return <Badge variant="outline">Pending</Badge>;
-      case 'cancelled':
+      case 'CANCELLED':
         return <Badge variant="destructive">Cancelled</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
@@ -154,11 +186,11 @@ export function OrderManagement() {
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
-      case 'urgent':
-        return <Badge variant="destructive">Urgent</Badge>;
-      case 'high':
+      case 'LOW':
+        return <Badge variant="destructive">Low</Badge>;
+      case 'HIGH':
         return <Badge className="bg-yellow-500 text-white">High</Badge>;
-      case 'standard':
+      case 'STANDARD':
         return <Badge variant="outline">Standard</Badge>;
       default:
         return <Badge variant="secondary">{priority}</Badge>;
@@ -167,20 +199,43 @@ export function OrderManagement() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'delivered':
+      case 'DELIVERED':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'in-transit':
-        return <Truck className="h-4 w-4 text-blue-500" />;
-      case 'processing':
+      case 'PROCESSING':
         return <RefreshCw className="h-4 w-4 text-yellow-500" />;
-      case 'pending':
-        return <Clock className="h-4 w-4 text-gray-500" />;
-      case 'cancelled':
+      case "SHIPPED":
+        return <Truck className="h-4 w-4 text-blue-500" />;
+      case 'CANCELLED':
         return <AlertCircle className="h-4 w-4 text-red-500" />;
       default:
         return null;
     }
   };
+
+  const filteredOrders = orders.filter((order) => {
+    const orderId = order.orderId?.toString().toLowerCase() || "";
+    const clinic = order.clinic?.toString().toLowerCase() || "";
+    const search = searchTerm.toLowerCase();
+
+    const matchesSearch =
+      orderId.includes(search) || clinic.includes(search);
+
+    // 🔄 Status filter
+    const matchesStatus =
+      statusFilter === "All"
+        ? true
+        : order.orderStatus === statusFilter;
+
+    // ⭐ Priority filter
+    const matchesPriority =
+      priorityFilter === "All"
+        ? true
+        : order.priority?.toUpperCase() === priorityFilter;
+
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
+
 
   return (
     <div className="space-y-6">
@@ -250,25 +305,26 @@ export function OrderManagement() {
                     <SelectValue placeholder="Order Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="in-transit">In Transit</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="All">All Status</SelectItem>
+                    <SelectItem value="PROCESSING">Processing</SelectItem>
+                    <SelectItem value="SHIPPED">Shipped</SelectItem>
+                    <SelectItem value="DELIVERED">Delivered</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select>
+
+                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Priority" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Priority</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="All">All Priority</SelectItem>
+                    <SelectItem value="HIGH">High</SelectItem>
+                    <SelectItem value="STANDARD">Standard</SelectItem>
+                    <SelectItem value="LOW">Low</SelectItem>
                   </SelectContent>
                 </Select>
+
               </div>
             </CardContent>
           </Card>
@@ -289,24 +345,22 @@ export function OrderManagement() {
                     <TableHead>Total</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Priority</TableHead>
-                    <TableHead>Delivery</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
+                  {filteredOrders.map((order) => (
+                    <TableRow key={order._id}>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{order.id}</span>
+                            <span className="font-medium">{order.orderId}</span>
                           </div>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Calendar className="h-3 w-3" />
-                            {order.orderDate}
+                            {formatDate(order.date)}
                           </div>
-                          <p className="text-xs text-muted-foreground">{order.vendor}</p>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -316,7 +370,7 @@ export function OrderManagement() {
                         <div className="space-y-1">
                           {order.items.slice(0, 2).map((item, index) => (
                             <div key={index} className="text-xs">
-                              {item.qty}x {item.name}
+                              {item.quantity}x {item.name}
                             </div>
                           ))}
                           {order.items.length > 2 && (
@@ -328,22 +382,17 @@ export function OrderManagement() {
                       </TableCell>
                       <TableCell>
                         <span className="text-primary font-medium">
-                          ${order.total.toLocaleString()}
+                          ₹{order.totalAmount.toLocaleString()}
                         </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(order.status)}
-                          {getStatusBadge(order.status)}
+                          {getStatusIcon(order.orderStatus)}
+                          {getStatusBadge(order.orderStatus)}
                         </div>
                       </TableCell>
                       <TableCell>
                         {getPriorityBadge(order.priority)}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {order.deliveryDate}
-                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
@@ -371,33 +420,32 @@ export function OrderManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {orders.filter(order => order.status === 'in-transit' || order.status === 'processing').map((order) => (
-                  <Card key={order.id} className="border-l-4 border-l-primary">
+                {filteredOrders.filter(order => order.orderStatus === 'SHIPPED' || order.orderStatus === 'PROCESSING').map((order) => (
+                  <Card key={order._id} className="border-l-4 border-l-primary">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <h3 className="font-medium">{order.id}</h3>
+                          <h3 className="font-medium">{order._id}</h3>
                           <p className="text-sm text-muted-foreground">{order.clinic}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-primary font-medium">${order.total.toLocaleString()}</p>
-                          <p className="text-sm text-muted-foreground">Expected: {order.deliveryDate}</p>
+                          <p className="text-primary font-medium">${order.totalAmount.toLocaleString()}</p>
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-sm">Order Status</span>
-                          {getStatusBadge(order.status)}
+                          {getStatusBadge(order.orderStatus)}
                         </div>
 
                         <div className="w-full bg-accent rounded-full h-2">
                           <div
                             className="bg-primary h-2 rounded-full transition-all duration-500"
                             style={{
-                              width: order.status === 'processing' ? '25%' :
-                                order.status === 'in-transit' ? '75%' :
-                                  order.status === 'delivered' ? '100%' : '0%'
+                              width: order.orderStatus === 'PROCESSING' ? '25%' :
+                                order.orderStatus === 'SHIPPED' ? '75%' :
+                                  order.orderStatus === 'DELIVERED' ? '100%' : '0%'
                             }}
                           ></div>
                         </div>
