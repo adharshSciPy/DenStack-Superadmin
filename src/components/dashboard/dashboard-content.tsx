@@ -12,6 +12,7 @@ import { AuditLogs } from './sections/audit-logs';
 import { NotificationCenter } from './sections/notification-center';
 import { SystemActivity } from './sections/system-activity';
 import { GlobalSettings } from './sections/global-settings';
+import { DoctorManagement } from './sections/doctor-management';
 
 interface DashboardContentProps {
   activeSection: string;
@@ -24,6 +25,8 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
         return <DashboardOverview />;
       case 'clinics':
         return <ClinicManagement />;
+      case 'doctors':
+        return <DoctorManagement />;
       case 'subscriptions':
         return <SubscriptionManagement />;
       case 'analytics':

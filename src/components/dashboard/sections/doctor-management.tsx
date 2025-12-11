@@ -109,7 +109,7 @@ const subscriptionPlans = [
   { name: 'Enterprise', color: 'bg-purple-500', count: 32 }
 ];
 
-export function ClinicManagement() {
+export function DoctorManagement() {
   const [clinicCounts, setClinicCounts] = useState<ClinicCount>({
     totalClinics: 0,
     activeClinics: 0,
@@ -147,19 +147,19 @@ export function ClinicManagement() {
 
   const clinicStats = [
     {
-      label: "Total Clinics",
+      label: "Total Doctors",
       value: clinicCounts.totalClinics,
       icon: Building2,
       color: "text-primary"
     },
     {
-      label: "Active Clinics",
+      label: "Active Doctors",
       value: clinicCounts.activeClinics,
       icon: CheckCircle,
       color: "text-green-500"
     },
     {
-      label: "Expired Clinics",
+      label: "Expired Doctors",
       value: clinicCounts.expiredClinics,
       icon: AlertTriangle,
       color: "text-red-500"
@@ -256,9 +256,9 @@ export function ClinicManagement() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-primary">Clinic Management</h1>
+          <h1 className="text-primary">Doctor Management</h1>
           <p className="text-muted-foreground">
-            Monitor and manage all registered clinics
+            Monitor and manage all registered doctors
           </p>
         </div>
         <div className="flex gap-2">
@@ -268,7 +268,7 @@ export function ClinicManagement() {
           </Button>
           <Button size="sm">
             <Plus className="w-4 h-4 mr-2" />
-            Add Clinic
+            Add Doctor
           </Button>
         </div>
       </div>
@@ -294,7 +294,7 @@ export function ClinicManagement() {
       {/* Main Content */}
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">Clinic Overview</TabsTrigger>
+          <TabsTrigger value="overview">Doctor Overview</TabsTrigger>
           <TabsTrigger value="subscriptions">Subscription Plans</TabsTrigger>
           <TabsTrigger value="settings">Bulk Settings</TabsTrigger>
         </TabsList>
@@ -326,18 +326,6 @@ export function ClinicManagement() {
                   </SelectContent>
                 </Select>
 
-                <Select onValueChange={(value: string) => setSubscriptionFilter(value)}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Subscription" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Plans</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="starter">Starter</SelectItem>
-                  </SelectContent>
-                </Select>
-
               </div>
             </CardContent>
           </Card>
@@ -345,14 +333,14 @@ export function ClinicManagement() {
           {/* Clinics Table */}
           <Card>
             <CardHeader>
-              <CardTitle>All Clinics</CardTitle>
-              <CardDescription>Complete list of registered healthcare facilities</CardDescription>
+              <CardTitle>All Doctors</CardTitle>
+              <CardDescription>Complete list of registered doctors</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Clinic Details</TableHead>
+                    <TableHead>Doctor Details</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Subscription</TableHead>
                     <TableHead>Users</TableHead>
@@ -411,23 +399,6 @@ export function ClinicManagement() {
                           <Button size="sm" onClick={() => { statusUpdate(clinic._id) }}>
                             Status Update
                           </Button>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Clinic
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Users className="mr-2 h-4 w-4" />
-                              Manage Users
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                              Suspend Clinic
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
@@ -471,7 +442,7 @@ export function ClinicManagement() {
           <Card>
             <CardHeader>
               <CardTitle>Bulk Operations</CardTitle>
-              <CardDescription>Apply settings to multiple clinics at once</CardDescription>
+              <CardDescription>Apply settings to multiple doctors at once</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

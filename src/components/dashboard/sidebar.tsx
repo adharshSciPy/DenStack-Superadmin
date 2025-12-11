@@ -12,7 +12,8 @@ import {
   FileText,
   Bell,
   Activity,
-  Store
+  Store,
+  BriefcaseMedical
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -37,6 +38,12 @@ const sidebarItems = [
     id: 'clinics',
     label: 'Clinic Management',
     icon: Building2,
+    badge: null
+  },
+   {
+    id: 'doctors',
+    label: 'Doctor Management',
+    icon: BriefcaseMedical,
     badge: null
   },
   {
