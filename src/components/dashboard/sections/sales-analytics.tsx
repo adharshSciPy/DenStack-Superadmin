@@ -3,38 +3,40 @@ import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  ShoppingCart, 
+import {
+  TrendingUp,
+  ShoppingCart,
   Package,
   Download,
   Calendar,
-  BarChart3
+  BarChart3, IndianRupee
 } from 'lucide-react';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  BarChart, 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
   Bar,
   PieChart,
   Pie,
   Cell
 } from 'recharts';
 
-const salesData = [
-  { month: 'Jan', revenue: 28450, orders: 125, avgOrder: 227.6 },
-  { month: 'Feb', revenue: 31200, orders: 142, avgOrder: 219.7 },
-  { month: 'Mar', revenue: 29800, orders: 138, avgOrder: 215.9 },
-  { month: 'Apr', revenue: 34100, orders: 156, avgOrder: 218.6 },
-  { month: 'May', revenue: 38900, orders: 167, avgOrder: 233.1 },
-  { month: 'Jun', revenue: 42300, orders: 189, avgOrder: 223.8 }
-];
+import axios from "axios"
+import { useState, useEffect } from 'react';
+import { useAppSelector } from '../../../redux/hooks';
+import BASE_URLS from '../../../inventoryUrl';
+
+interface SalesStats {
+  totalRevenue: number,
+  totalOrders: number,
+  avgOrderValue: number,
+  growthRate: number
+}
 
 const categoryData = [
   { name: 'Imaging Equipment', value: 35.2, revenue: 14890, color: '#1E4D2B' },
@@ -61,9 +63,45 @@ const clinicPerformance = [
 ];
 
 export function SalesAnalytics() {
-  const totalRevenue = salesData.reduce((sum, data) => sum + data.revenue, 0);
-  const totalOrders = salesData.reduce((sum, data) => sum + data.orders, 0);
-  const avgOrderValue = totalRevenue / totalOrders;
+  const token = useAppSelector((state) => state.auth.token)
+  const [salesStats, setSalesStats] = useState<SalesStats>({
+    totalRevenue: 0,
+    totalOrders: 0,
+    avgOrderValue: 0,
+    growthRate: 0
+  })
+
+  const [revenueTrend, setRevenueTrend] = useState([]);
+  const [orderVolume, setOrderVolume] = useState([]);
+
+
+
+  useEffect(() => {
+    const fetchSales = async () => {
+      try {
+        const statsRes = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/super-admin/metrics`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        )
+
+        const res = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/super-admin/trends`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        )
+        setOrderVolume(res.data.trends.orderVolume)
+        setRevenueTrend(res.data.trends.revenueTrend)
+        console.log("res", res)
+
+        setSalesStats(statsRes.data.metrics)
+      } catch (error) {
+        console.log(error)
+      }
+    }
+    fetchSales()
+  }, [token])
+
 
   return (
     <div className="space-y-6">
@@ -103,12 +141,12 @@ export function SalesAnalytics() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl text-primary">${totalRevenue.toLocaleString()}</span>
+                <span className="text-2xl text-primary">₹{salesStats.totalRevenue.toLocaleString()}</span>
                 <Badge className="bg-secondary text-secondary-foreground">+18%</Badge>
               </div>
               <p className="text-xs text-muted-foreground">last 6 months</p>
@@ -124,7 +162,7 @@ export function SalesAnalytics() {
           <CardContent>
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl text-primary">{totalOrders}</span>
+                <span className="text-2xl text-primary">{salesStats.totalOrders}</span>
                 <Badge className="bg-secondary text-secondary-foreground">+15%</Badge>
               </div>
               <p className="text-xs text-muted-foreground">completed orders</p>
@@ -140,7 +178,7 @@ export function SalesAnalytics() {
           <CardContent>
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl text-primary">${Math.round(avgOrderValue)}</span>
+                <span className="text-2xl text-primary">₹{Math.round(salesStats.avgOrderValue)}</span>
                 <Badge className="bg-secondary text-secondary-foreground">+2.3%</Badge>
               </div>
               <p className="text-xs text-muted-foreground">per transaction</p>
@@ -156,7 +194,7 @@ export function SalesAnalytics() {
           <CardContent>
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl text-primary">18.2%</span>
+                <span className="text-2xl text-primary">{salesStats.growthRate}%</span>
                 <Badge className="bg-secondary text-secondary-foreground">MoM</Badge>
               </div>
               <p className="text-xs text-muted-foreground">month over month</p>
@@ -184,7 +222,7 @@ export function SalesAnalytics() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={salesData}>
+                  <LineChart data={revenueTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -192,6 +230,7 @@ export function SalesAnalytics() {
                     <Line type="monotone" dataKey="revenue" stroke="#1E4D2B" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
+
               </CardContent>
             </Card>
 
@@ -203,7 +242,7 @@ export function SalesAnalytics() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={salesData}>
+                  <BarChart data={orderVolume}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -211,6 +250,7 @@ export function SalesAnalytics() {
                     <Bar dataKey="orders" fill="#3FA796" />
                   </BarChart>
                 </ResponsiveContainer>
+
               </CardContent>
             </Card>
           </div>
@@ -235,7 +275,7 @@ export function SalesAnalytics() {
                         <p className="text-sm text-muted-foreground">{product.sales} units sold</p>
                       </div>
                     </div>
-                    
+
                     <div className="text-right">
                       <p className="text-primary font-medium">${product.revenue.toLocaleString()}</p>
                       <div className="flex items-center gap-1">
@@ -323,8 +363,8 @@ export function SalesAnalytics() {
                   {categoryData.map((item) => (
                     <div key={item.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
+                        <div
+                          className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
                         <span className="text-sm">{item.name}</span>
@@ -353,9 +393,9 @@ export function SalesAnalytics() {
                       <span className="text-sm text-muted-foreground">{category.value}%</span>
                     </div>
                     <div className="w-full bg-accent rounded-full h-2">
-                      <div 
-                        className="h-2 rounded-full" 
-                        style={{ 
+                      <div
+                        className="h-2 rounded-full"
+                        style={{
                           width: `${category.value}%`,
                           backgroundColor: category.color
                         }}
