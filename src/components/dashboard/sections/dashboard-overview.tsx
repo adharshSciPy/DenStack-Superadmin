@@ -1,12 +1,13 @@
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
-import { 
-  Building2, 
-  Users, 
-  DollarSign, 
-  TrendingUp, 
-  AlertCircle, 
+import {
+  Building2,
+  Users,
+  DollarSign,
+  TrendingUp,
+  AlertCircle,
   CheckCircle,
   ShoppingCart,
   MessageSquare,
@@ -14,33 +15,106 @@ import {
   BarChart3
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { useAppSelector } from '../../../redux/hooks.js';
+import axios from 'axios';
+import BASE_URLS from '../../../inventoryUrl';
 
-const revenueData = [
-  { month: 'Jan', revenue: 45000, subscriptions: 12 },
-  { month: 'Feb', revenue: 52000, subscriptions: 15 },
-  { month: 'Mar', revenue: 48000, subscriptions: 14 },
-  { month: 'Apr', revenue: 61000, subscriptions: 18 },
-  { month: 'May', revenue: 68000, subscriptions: 22 },
-  { month: 'Jun', revenue: 75000, subscriptions: 25 }
-];
+interface RevenueData {
+  month: string;
+  revenue: number;
+  subscriptions: number;
+}
+
+interface ClinicCount {
+  totalClinics: number;
+  expiredClinics: number;
+  activeClinics: number;
+}
+
+interface ClinicPieData {
+  name: string;
+  value: number;
+  color: string;
+}
+
 
 const clinicData = [
+  { name: 'Total', value: 23, color: '#FACC15' },
   { name: 'Active', value: 145, color: '#10B981' },
-  { name: 'Trial', value: 23, color: '#FACC15' },
   { name: 'Expired', value: 8, color: '#EF4444' }
 ];
 
 export function DashboardOverview() {
+  const token = useAppSelector((state) => state.auth.token)
+  const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
+  const [clinicCount, setClinicCount] = useState<ClinicCount>({
+    totalClinics: 0,
+    expiredClinics: 0,
+    activeClinics: 0
+  });
+
+  const [clinicPieData, setClinicPieData] = useState<ClinicPieData[]>([]);
+
+
+  useEffect(() => {
+    const fetchdata = async () => {
+      try {
+        const res = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/super-admin/getMonthlySummary`);
+        const countRes = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/clinic/clicnicCount`)
+
+        const transformedData: RevenueData[] = res.data.data.map((item: any) => ({
+          month: item.month,
+          revenue: item.totalRevenue,
+          subscriptions: item.totalSubscriptions,
+        }));
+
+        const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        const sortedData = transformedData.sort(
+          (a, b) => monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month)
+        );
+
+        const counts = countRes.data.data;
+
+        setRevenueData(sortedData);
+        setClinicCount(counts)
+        setClinicPieData([
+          {
+            name: 'Active',
+            value: counts.activeClinics,
+            color: '#10B981'
+          },
+          {
+            name: 'Expired',
+            value: counts.expiredClinics,
+            color: '#EF4444'
+          },
+          {
+            name: 'Total',
+            value: counts.totalClinics,
+            color: '#FACC15'
+          }
+        ]);
+
+        console.log("revenue&subs", res)
+        console.log("clinic status", countRes)
+      } catch (error) {
+        console.log(error)
+      }
+    }
+    fetchdata()
+  }, [token])
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 
+          <h1
             className="text-2xl sm:text-3xl font-medium"
-            style={{ 
-              background: 'var(--primary)', 
-              WebkitBackgroundClip: 'text', 
+            style={{
+              background: 'var(--primary)',
+              WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text'
             }}
@@ -56,8 +130,8 @@ export function DashboardOverview() {
             <BarChart3 className="w-4 h-4 mr-2" />
             Export Report
           </Button>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             className="gradient-primary text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
           >
             <Activity className="w-4 h-4 mr-2" />
@@ -139,7 +213,7 @@ export function DashboardOverview() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
                 <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
                 <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{
                     background: 'var(--card)',
                     border: '1px solid var(--border)',
@@ -165,7 +239,7 @@ export function DashboardOverview() {
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
-                  data={clinicData}
+                  data={clinicPieData}
                   cx="50%"
                   cy="50%"
                   innerRadius={50}
@@ -173,11 +247,11 @@ export function DashboardOverview() {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {clinicData.map((entry, index) => (
+                  {clinicPieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   contentStyle={{
                     background: 'var(--card)',
                     border: '1px solid var(--border)',
@@ -189,10 +263,10 @@ export function DashboardOverview() {
               </PieChart>
             </ResponsiveContainer>
             <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-4">
-              {clinicData.map((item) => (
+              {clinicPieData.map((item) => (
                 <div key={item.name} className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
+                  <div
+                    className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: item.color }}
                   />
                   <span className="text-xs sm:text-sm text-muted-foreground">
