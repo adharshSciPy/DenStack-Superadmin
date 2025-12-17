@@ -19,7 +19,7 @@ import {
   Phone,
   Mail,
   MapPin,
-  IndianRupee, X
+  IndianRupee, X, Trash
 } from 'lucide-react';
 import axios from "axios"
 import BASE_URLS from '../../../inventoryUrl.js';
@@ -98,6 +98,9 @@ export function VendorManagement() {
     status: 'Active'
   });
   const [vendorCategories, setVendorCategories] = useState<VendorCategory[]>([])
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [vendorToDelete, setVendorToDelete] = useState<string | null>(null);
+
 
   const token = useAppSelector((state) => state.auth.token)
   const fetchVendors = async () => {
@@ -134,6 +137,31 @@ export function VendorManagement() {
   useEffect(() => {
     fetchVendors()
   }, [token])
+
+  const handleDelete = async (id: string) => {
+    try {
+      console.log("id", id)
+      const deleted = await axios.delete(`${BASE_URLS.INVENTORY}api/v1/vendor/deleteVendor/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      )
+      await fetchVendors();
+      setDeleteModalOpen(false);
+      setVendorToDelete(null);
+      console.log("del", deleted)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  const openDeleteModal = (id: string) => {
+    setVendorToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+
+
 
 
 
@@ -712,8 +740,8 @@ export function VendorManagement() {
                           <Button size="sm" variant="ghost">
                             <Eye className="w-3 h-3" />
                           </Button>
-                          <Button size="sm" variant="ghost">
-                            <Edit className="w-3 h-3" />
+                          <Button size="sm" variant="ghost" onClick={() => openDeleteModal(vendor._id)}>
+                            <Trash color='red' className="w-3 h-3" />
                           </Button>
                         </div>
                       </TableCell>
@@ -888,6 +916,75 @@ export function VendorManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {deleteModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setDeleteModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '420px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.25)'
+            }}
+          >
+            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
+              Confirm Deletion
+            </h3>
+
+            <p style={{ fontSize: '14px', color: '#555', marginBottom: '24px' }}>
+              Are you sure you want to delete this vendor?
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #ddd',
+                  backgroundColor: '#f9f9f9',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => {
+                  if (vendorToDelete) {
+                    handleDelete(vendorToDelete);
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#ef4444',
+                  color: '#fff',
+                  cursor: 'pointer'
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
