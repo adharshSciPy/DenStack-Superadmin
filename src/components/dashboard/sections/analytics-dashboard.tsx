@@ -1,26 +1,27 @@
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Users, 
+import {
+  BarChart3,
+  TrendingUp,
+  Users,
   Activity,
   Calendar,
   Download,
   Filter
 } from 'lucide-react';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  BarChart, 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
   Bar,
   AreaChart,
   Area,
@@ -28,6 +29,23 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import axios from 'axios';
+import { useAppSelector } from '../../../redux/hooks.js';
+import BASE_URLS from '../../../inventoryUrl';
+
+interface DashboardMetric {
+  count?: number;
+  percentage?: number;
+  score?: number;
+}
+
+interface DashboardStats {
+  totalAppointments: DashboardMetric;
+  activeUsers: DashboardMetric;
+  systemEfficiency: DashboardMetric;
+  avgSatisfaction: DashboardMetric;
+}
+
 
 const performanceData = [
   { clinic: 'SmileCare Dental', users: 245, revenue: 12500, satisfaction: 4.8, efficiency: 92 },
@@ -61,6 +79,24 @@ const regionData = [
 ];
 
 export function AnalyticsDashboard() {
+  const token = useAppSelector((state) => state.auth.token)
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        const res = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/super-admin/appointmentStats`);
+        console.log("res", res)
+        setDashboardStats(res.data.dashboard);
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats', error);
+      }
+    };
+
+    fetchDashboardStats();
+  }, [token]);
+
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -104,8 +140,7 @@ export function AnalyticsDashboard() {
           <CardContent>
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl text-primary">16,800</span>
-                <Badge className="bg-secondary text-secondary-foreground">+8.2%</Badge>
+                <span className="text-2xl text-primary">{dashboardStats?.totalAppointments.count ?? 0}</span>
               </div>
               <p className="text-xs text-muted-foreground">this month</p>
             </div>
@@ -120,8 +155,7 @@ export function AnalyticsDashboard() {
           <CardContent>
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl text-primary">12,487</span>
-                <Badge className="bg-secondary text-secondary-foreground">+284</Badge>
+                <span className="text-2xl text-primary">{dashboardStats?.activeUsers.count ?? 0}</span>
               </div>
               <p className="text-xs text-muted-foreground">across all clinics</p>
             </div>
@@ -136,8 +170,7 @@ export function AnalyticsDashboard() {
           <CardContent>
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl text-primary">94.2%</span>
-                <Badge className="bg-secondary text-secondary-foreground">+1.5%</Badge>
+                <span className="text-2xl text-primary">{dashboardStats?.systemEfficiency.percentage ?? 0}%</span>
               </div>
               <p className="text-xs text-muted-foreground">overall performance</p>
             </div>
@@ -152,8 +185,7 @@ export function AnalyticsDashboard() {
           <CardContent>
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl text-primary">4.6</span>
-                <Badge className="bg-secondary text-secondary-foreground">+0.2</Badge>
+                <span className="text-2xl text-primary">{dashboardStats?.avgSatisfaction.score ?? 0}</span>
               </div>
               <p className="text-xs text-muted-foreground">out of 5.0</p>
             </div>
@@ -309,15 +341,15 @@ export function AnalyticsDashboard() {
                             ${comm.cost}
                           </Badge>
                         </div>
-                        
+
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span>Usage</span>
                             <span>{comm.usage} / {comm.limit}</span>
                           </div>
                           <div className="w-full bg-accent rounded-full h-2">
-                            <div 
-                              className="bg-primary h-2 rounded-full" 
+                            <div
+                              className="bg-primary h-2 rounded-full"
                               style={{ width: `${(comm.usage / comm.limit) * 100}%` }}
                             ></div>
                           </div>
@@ -364,8 +396,8 @@ export function AnalyticsDashboard() {
                 <div className="grid grid-cols-2 gap-2 mt-4">
                   {regionData.map((item) => (
                     <div key={item.name} className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
+                      <div
+                        className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: item.color }}
                       />
                       <span className="text-sm">{item.name}: {item.value}</span>
@@ -390,9 +422,9 @@ export function AnalyticsDashboard() {
                         <span className="text-sm text-muted-foreground">{region.value} clinics</span>
                       </div>
                       <div className="w-full bg-accent rounded-full h-2">
-                        <div 
-                          className="h-2 rounded-full" 
-                          style={{ 
+                        <div
+                          className="h-2 rounded-full"
+                          style={{
                             width: `${(region.value / 315) * 100}%`,
                             backgroundColor: region.color
                           }}
