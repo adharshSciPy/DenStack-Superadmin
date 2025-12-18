@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
@@ -6,78 +7,45 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { Switch } from '../../ui/switch';
-import { 
-  Search, 
-  Plus, 
-  Package, 
-  Edit, 
-  Eye, 
+import {
+  Search,
+  Plus,
+  Package,
+  Edit,
+  Eye,
   Star,
   Filter,
   Grid,
   List,
   Tag,
-  DollarSign
+  IndianRupee
 } from 'lucide-react';
+import axios from 'axios';
+import BASE_URLS from '../../../inventoryUrl';
+import { useAppSelector } from '../../../redux/hooks';
 
-const products = [
-  {
-    id: 'PRD-001',
-    name: 'Digital X-Ray Sensor',
-    category: 'Imaging Equipment',
-    vendor: 'TechDental Solutions',
-    price: 2499,
-    cost: 1899,
-    stock: 45,
-    rating: 4.8,
-    reviews: 24,
-    status: 'active',
-    clinicAccess: ['Clinic Admin', 'Dentist'],
-    image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=100&h=100&fit=crop&crop=center'
-  },
-  {
-    id: 'PRD-002',
-    name: 'Dental Implant Kit',
-    category: 'Surgical Instruments',
-    vendor: 'Premium Dental Supply',
-    price: 899,
-    cost: 679,
-    stock: 23,
-    rating: 4.9,
-    reviews: 18,
-    status: 'active',
-    clinicAccess: ['Clinic Admin', 'Dentist'],
-    image: 'https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=100&h=100&fit=crop&crop=center'
-  },
-  {
-    id: 'PRD-003',
-    name: 'Composite Filling Material',
-    category: 'Consumables',
-    vendor: 'DentalCare Products',
-    price: 149,
-    cost: 89,
-    stock: 156,
-    rating: 4.6,
-    reviews: 45,
-    status: 'active',
-    clinicAccess: ['Clinic Admin', 'Dentist', 'Dental Assistant'],
-    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop&crop=center'
-  },
-  {
-    id: 'PRD-004',
-    name: 'Intraoral Camera',
-    category: 'Imaging Equipment',
-    vendor: 'TechDental Solutions',
-    price: 1899,
-    cost: 1299,
-    stock: 8,
-    rating: 4.7,
-    reviews: 32,
-    status: 'low-stock',
-    clinicAccess: ['Clinic Admin', 'Dentist'],
-    image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=100&h=100&fit=crop&crop=center'
-  }
-];
+interface ProductStats {
+  totalProducts: number;
+  avgRating: string;
+  lowStockCount: number;
+  totalInventoryValue: number
+}
+
+interface ProductDetails {
+  _id: string;
+  productId: string;
+  name: string;
+  image: string;
+  brand: string;
+  subCategory: string;
+  price: number;
+  stock: number;
+  status: string;
+  margin: string;
+  rating: string;
+  isLowStock: boolean
+}
+
 
 const categories = [
   { name: 'Imaging Equipment', count: 45, revenue: 123450 },
@@ -89,6 +57,37 @@ const categories = [
 ];
 
 export function ProductCatalog() {
+  const token = useAppSelector((state) => state.auth.token)
+  const [productCount, setProductCount] = useState<ProductStats>({
+    totalProducts: 0,
+    avgRating: "",
+    lowStockCount: 0,
+    totalInventoryValue: 0
+  })
+  const [products, setProducts] = useState<ProductDetails[]>([])
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+
+
+
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await axios.get(`${BASE_URLS.INVENTORY}api/v1/product/productStats`);
+        const productdetails = await axios.get(`${BASE_URLS.INVENTORY}api/v1/product/productinventoryList`);
+        console.log("details", productdetails)
+        console.log("res", res)
+        setProducts(productdetails.data.products)
+        setProductCount(res.data.data)
+      } catch (error) {
+        console.log(error)
+      }
+    }
+    fetchData()
+  }, [token])
+
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -105,6 +104,26 @@ export function ProductCatalog() {
   const getMargin = (price: number, cost: number) => {
     return Math.round(((price - cost) / price) * 100);
   };
+
+  const normalizeImagePath = (path: string) => path.startsWith('/') ? path.slice(1) : path;
+
+  const filteredProducts = products.filter((product) => {
+    const term = search.toLowerCase();
+
+    const matchesSearch =
+      product.name?.toLowerCase().includes(term) ||
+      product.productId?.toLowerCase().includes(term) ||
+      product.brand?.toLowerCase().includes(term);
+
+    const matchesStatus =
+      statusFilter === 'All' || product.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+
+
+
 
   return (
     <div className="space-y-6">
@@ -137,8 +156,7 @@ export function ProductCatalog() {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <span className="text-2xl text-primary">1,247</span>
-              <p className="text-xs text-muted-foreground">across all categories</p>
+              <span className="text-2xl text-primary">{productCount.totalProducts}</span>
             </div>
           </CardContent>
         </Card>
@@ -150,8 +168,7 @@ export function ProductCatalog() {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <span className="text-2xl text-primary">4.7</span>
-              <p className="text-xs text-muted-foreground">customer satisfaction</p>
+              <span className="text-2xl text-primary">{productCount.avgRating}</span>
             </div>
           </CardContent>
         </Card>
@@ -163,8 +180,7 @@ export function ProductCatalog() {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <span className="text-2xl text-primary">23</span>
-              <p className="text-xs text-muted-foreground">need restocking</p>
+              <span className="text-2xl text-primary">{productCount.lowStockCount}</span>
             </div>
           </CardContent>
         </Card>
@@ -172,12 +188,11 @@ export function ProductCatalog() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm">Total Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <span className="text-2xl text-primary">$2.1M</span>
-              <p className="text-xs text-muted-foreground">inventory value</p>
+              <span className="text-2xl text-primary">₹{productCount.totalInventoryValue}</span>
             </div>
           </CardContent>
         </Card>
@@ -200,7 +215,8 @@ export function ProductCatalog() {
                 <div className="flex-1 min-w-[300px]">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search products by name, SKU, or vendor..." className="pl-10" />
+                    <Input placeholder="Search products by name, SKU, or vendor..." value={search}
+                      onChange={(e) => setSearch(e.target.value)} className="pl-10" />
                   </div>
                 </div>
                 <Select>
@@ -214,17 +230,19 @@ export function ProductCatalog() {
                     <SelectItem value="consumables">Consumables</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="low-stock">Low Stock</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="All">All Status</SelectItem>
+                    <SelectItem value="Available">Available</SelectItem>
+                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                    <SelectItem value="Discontinued">Discontinued</SelectItem>
+                    <SelectItem value="Expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>
+
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm">
                     <Grid className="w-4 h-4" />
@@ -248,49 +266,33 @@ export function ProductCatalog() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Product</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Vendor</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Margin</TableHead>
                     <TableHead>Stock</TableHead>
                     <TableHead>Rating</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Access</TableHead>
-                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.map((product) => (
-                    <TableRow key={product.id}>
+                  {filteredProducts.map((product) => (
+                    <TableRow key={product._id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <img 
-                            src={product.image} 
+                          <img
+                            src={`${BASE_URLS.INVENTORY}${normalizeImagePath(product.image)}`}
                             alt={product.name}
                             className="w-10 h-10 rounded object-cover"
                           />
                           <div>
                             <p className="font-medium">{product.name}</p>
-                            <p className="text-xs text-muted-foreground">{product.id}</p>
+                            <p className="text-xs text-muted-foreground">{product.productId}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{product.category}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{product.vendor}</span>
-                      </TableCell>
-                      <TableCell>
                         <div>
-                          <span className="text-primary font-medium">${product.price}</span>
-                          <p className="text-xs text-muted-foreground">Cost: ${product.cost}</p>
+                          <span className="text-primary font-medium">₹{product.price}</span>
+                          <p className="text-xs text-muted-foreground">Cost: ${product.price}</p>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-secondary text-secondary-foreground">
-                          {getMargin(product.price, product.cost)}%
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <span className={product.stock < 20 ? 'text-yellow-600' : 'text-foreground'}>
@@ -301,33 +303,11 @@ export function ProductCatalog() {
                         <div className="flex items-center gap-1">
                           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                           <span className="text-sm">{product.rating}</span>
-                          <span className="text-xs text-muted-foreground">({product.reviews})</span>
+                          {/* <span className="text-xs text-muted-foreground">({product.reviews})</span> */}
                         </div>
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(product.status)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {product.clinicAccess.slice(0, 2).map((access) => (
-                            <Badge key={access} variant="outline" className="text-xs">
-                              {access.split(' ')[0]}
-                            </Badge>
-                          ))}
-                          {product.clinicAccess.length > 2 && (
-                            <Badge variant="outline" className="text-xs">+{product.clinicAccess.length - 2}</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="ghost">
-                            <Eye className="w-3 h-3" />
-                          </Button>
-                          <Button size="sm" variant="ghost">
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -355,7 +335,7 @@ export function ProductCatalog() {
                             <Edit className="w-4 h-4" />
                           </Button>
                         </div>
-                        
+
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span>Products</span>
@@ -366,7 +346,7 @@ export function ProductCatalog() {
                             <span className="text-primary">${category.revenue.toLocaleString()}</span>
                           </div>
                         </div>
-                        
+
                         <Button variant="outline" className="w-full">
                           View Products
                         </Button>
