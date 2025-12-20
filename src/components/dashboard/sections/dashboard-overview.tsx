@@ -5,7 +5,7 @@ import { Button } from '../../ui/button';
 import {
   Building2,
   Users,
-  DollarSign,
+  IndianRupee,
   TrendingUp,
   AlertCircle,
   CheckCircle,
@@ -37,6 +37,13 @@ interface ClinicPieData {
   color: string;
 }
 
+interface Stats {
+  totalClinics: number;
+  totalUsers: number;
+  subscriptionRevenue: number;
+  ecommerceRevenue: number;
+}
+
 
 const clinicData = [
   { name: 'Total', value: 23, color: '#FACC15' },
@@ -52,6 +59,12 @@ export function DashboardOverview() {
     expiredClinics: 0,
     activeClinics: 0
   });
+  const [stats, setStats] = useState<Stats>({
+    totalClinics: 0,
+    totalUsers: 0,
+    subscriptionRevenue: 0,
+    ecommerceRevenue: 0
+  })
 
   const [clinicPieData, setClinicPieData] = useState<ClinicPieData[]>([]);
 
@@ -60,7 +73,8 @@ export function DashboardOverview() {
     const fetchdata = async () => {
       try {
         const res = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/super-admin/getMonthlySummary`);
-        const countRes = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/clinic/clicnicCount`)
+        const countRes = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/clinic/clicnicCount`);
+        const statsRes = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/super-admin/dashStats`)
 
         const transformedData: RevenueData[] = res.data.data.map((item: any) => ({
           month: item.month,
@@ -77,7 +91,8 @@ export function DashboardOverview() {
         const counts = countRes.data.data;
 
         setRevenueData(sortedData);
-        setClinicCount(counts)
+        setClinicCount(counts);
+        setStats(statsRes.data)
         setClinicPieData([
           {
             name: 'Active',
@@ -96,8 +111,7 @@ export function DashboardOverview() {
           }
         ]);
 
-        console.log("revenue&subs", res)
-        console.log("clinic status", countRes)
+        console.log("stats", statsRes)
       } catch (error) {
         console.log(error)
       }
@@ -149,7 +163,7 @@ export function DashboardOverview() {
           </div>
           <div className="space-y-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold text-primary">176</span>
+              <span className="text-2xl sm:text-3xl font-bold text-primary">{stats.totalClinics}</span>
               <Badge className="gradient-secondary text-white border-0 px-2 py-1 text-xs">+12</Badge>
             </div>
             <p className="text-xs text-muted-foreground">145 active, 8 expired</p>
@@ -159,11 +173,11 @@ export function DashboardOverview() {
         <div className="glass rounded-xl p-4 sm:p-6 backdrop-blur-sm border-0">
           <div className="flex flex-row items-center justify-between space-y-0 pb-2">
             <h3 className="text-xs sm:text-sm font-medium text-muted-foreground">Monthly Revenue</h3>
-            <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            <IndianRupee className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
           </div>
           <div className="space-y-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold text-primary">$75,000</span>
+              <span className="text-2xl sm:text-3xl font-bold text-primary">₹{stats.subscriptionRevenue}</span>
               <Badge className="gradient-secondary text-white border-0 px-2 py-1 text-xs">+12%</Badge>
             </div>
             <p className="text-xs text-muted-foreground">vs last month</p>
@@ -177,7 +191,7 @@ export function DashboardOverview() {
           </div>
           <div className="space-y-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold text-primary">12,487</span>
+              <span className="text-2xl sm:text-3xl font-bold text-primary">{stats.totalUsers}</span>
               <Badge className="gradient-secondary text-white border-0 px-2 py-1 text-xs">+284</Badge>
             </div>
             <p className="text-xs text-muted-foreground">across all clinics</p>
@@ -191,7 +205,7 @@ export function DashboardOverview() {
           </div>
           <div className="space-y-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold text-primary">$28,450</span>
+              <span className="text-2xl sm:text-3xl font-bold text-primary">₹{stats.ecommerceRevenue}</span>
               <Badge className="gradient-secondary text-white border-0 px-2 py-1 text-xs">+18%</Badge>
             </div>
             <p className="text-xs text-muted-foreground">this month</p>
