@@ -37,16 +37,22 @@ interface Product {
   __v: number;
 }
 
+interface CategoryProducts {
+  productCount: number;
+  categoryId: string;
+  categoryName: string
+}
 
 
-const categories = [
-  { name: 'Imaging Equipment', count: 45, icon: '📷' },
-  { name: 'Surgical Instruments', count: 128, icon: '🔧' },
-  { name: 'Consumables', count: 289, icon: '📦' },
-  { name: 'Digital Solutions', count: 67, icon: '💻' },
-  { name: 'Sterilization', count: 34, icon: '🧪' },
-  { name: 'Orthodontics', count: 89, icon: '🦷' }
-];
+
+// const categories = [
+//   { name: 'Imaging Equipment', count: 45, icon: '📷' },
+//   { name: 'Surgical Instruments', count: 128, icon: '🔧' },
+//   { name: 'Consumables', count: 289, icon: '📦' },
+//   { name: 'Digital Solutions', count: 67, icon: '💻' },
+//   { name: 'Sterilization', count: 34, icon: '🧪' },
+//   { name: 'Orthodontics', count: 89, icon: '🦷' }
+// ];
 
 const marketplaceStats = [
   { label: 'Total Products', value: '1,247', change: '+23', icon: Package },
@@ -59,6 +65,7 @@ export function EcommerceMarketplace() {
   const { token } = useAppSelector((state) => state.auth);
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [categoryProducts, setCategoryproducts] = useState<CategoryProducts[]>([])
 
   const fetchProducts = async () => {
     try {
@@ -68,8 +75,14 @@ export function EcommerceMarketplace() {
           Authorization: `Bearer ${token}`
         }
       })
+      const res = await axios.get(`${BASE_URLS.INVENTORY}api/v1/category/categoryProducts`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      console.log("hai", res.data)
+      setCategoryproducts(res.data)
       setProducts(productDetails.data.data)
-      console.log("products", productDetails)
     } catch (error) {
       console.log(error)
     }
@@ -188,7 +201,7 @@ export function EcommerceMarketplace() {
 
                       {/* IMAGE */}
                       <div className="aspect-video bg-accent rounded-t-lg overflow-hidden">
-                        
+
                         <img
                           src={
                             product.image?.[0]
@@ -255,14 +268,13 @@ export function EcommerceMarketplace() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {categories.map((category) => (
-                  <Card key={category.name} className="hover:shadow-md transition-shadow cursor-pointer">
+                {categoryProducts.map((category) => (
+                  <Card key={category.categoryName} className="hover:shadow-md transition-shadow cursor-pointer">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="text-2xl">{category.icon}</div>
                         <div className="flex-1">
-                          <h3 className="font-medium">{category.name}</h3>
-                          <p className="text-sm text-muted-foreground">{category.count} products</p>
+                          <h3 className="font-medium">{category.categoryName}</h3>
+                          <p className="text-sm text-muted-foreground">{category.productCount} products</p>
                         </div>
                         <Button size="sm" variant="ghost">
                           <Eye className="w-4 h-4" />
