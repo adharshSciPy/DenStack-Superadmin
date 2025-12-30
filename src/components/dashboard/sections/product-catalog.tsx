@@ -46,15 +46,12 @@ interface ProductDetails {
   isLowStock: boolean
 }
 
+interface CategoryStats {
+  categoryName: string;
+  products: number;
+  revenue: number;
+}
 
-const categories = [
-  { name: 'Imaging Equipment', count: 45, revenue: 123450 },
-  { name: 'Surgical Instruments', count: 128, revenue: 234560 },
-  { name: 'Consumables', count: 289, revenue: 89340 },
-  { name: 'Digital Solutions', count: 67, revenue: 156780 },
-  { name: 'Sterilization', count: 34, revenue: 45230 },
-  { name: 'Orthodontics', count: 89, revenue: 198760 }
-];
 
 export function ProductCatalog() {
   const token = useAppSelector((state) => state.auth.token)
@@ -67,6 +64,7 @@ export function ProductCatalog() {
   const [products, setProducts] = useState<ProductDetails[]>([])
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [categories, setCategories] = useState<CategoryStats[]>([]);
 
 
 
@@ -76,8 +74,13 @@ export function ProductCatalog() {
       try {
         const res = await axios.get(`${BASE_URLS.INVENTORY}api/v1/product/productStats`);
         const productdetails = await axios.get(`${BASE_URLS.INVENTORY}api/v1/product/productinventoryList`);
-        console.log("details", productdetails)
-        console.log("res", res)
+        const categorydata = await axios.get(`${BASE_URLS.INVENTORY}api/v1/category/categoryDashboard`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        console.log("cateeee",categorydata.data.data);
+        setCategories(categorydata.data.data)
         setProducts(productdetails.data.products)
         setProductCount(res.data.data)
       } catch (error) {
@@ -326,11 +329,11 @@ export function ProductCatalog() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {categories.map((category) => (
-                  <Card key={category.name} className="hover:shadow-md transition-shadow">
+                  <Card key={category.categoryName} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{category.name}</h3>
+                          <h3 className="font-medium">{category.categoryName}</h3>
                           <Button size="sm" variant="ghost">
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -339,11 +342,11 @@ export function ProductCatalog() {
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span>Products</span>
-                            <span className="text-primary">{category.count}</span>
+                            <span className="text-primary">{category.products}</span>
                           </div>
                           <div className="flex justify-between text-sm">
                             <span>Revenue</span>
-                            <span className="text-primary">${category.revenue.toLocaleString()}</span>
+                            <span className="text-primary">₹{category.revenue.toLocaleString()}</span>
                           </div>
                         </div>
 

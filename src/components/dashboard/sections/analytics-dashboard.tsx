@@ -46,6 +46,23 @@ interface DashboardStats {
   avgSatisfaction: DashboardMetric;
 }
 
+interface UsageApiResponse {
+  months: string[];
+  trends: {
+    appointments: number[];
+    communications: number[];
+    ecommerce: number[];
+  };
+  currentMonth: {
+    name: string;
+    data: {
+      appointments: { count: number; percentage: number };
+      communications: { count: number; percentage: number };
+      ecommerce: { count: number; percentage: number };
+    };
+  };
+}
+
 
 const performanceData = [
   { clinic: 'SmileCare Dental', users: 245, revenue: 12500, satisfaction: 4.8, efficiency: 92 },
@@ -53,15 +70,6 @@ const performanceData = [
   { clinic: 'Dental Care Plus', users: 156, revenue: 7200, satisfaction: 4.4, efficiency: 85 },
   { clinic: 'Family Dental', users: 134, revenue: 6800, satisfaction: 4.7, efficiency: 90 },
   { clinic: 'Modern Dentistry', users: 178, revenue: 8900, satisfaction: 4.5, efficiency: 87 }
-];
-
-const usageData = [
-  { month: 'Jan', appointments: 12450, communications: 8920, ecommerce: 2340 },
-  { month: 'Feb', appointments: 13200, communications: 9150, ecommerce: 2890 },
-  { month: 'Mar', appointments: 11800, communications: 8750, ecommerce: 2650 },
-  { month: 'Apr', appointments: 14500, communications: 10200, ecommerce: 3120 },
-  { month: 'May', appointments: 15600, communications: 11100, ecommerce: 3450 },
-  { month: 'Jun', appointments: 16800, communications: 12300, ecommerce: 3890 }
 ];
 
 const communicationData = [
@@ -81,20 +89,38 @@ const regionData = [
 export function AnalyticsDashboard() {
   const token = useAppSelector((state) => state.auth.token)
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [usageAnalytics, setUsageAnalytics] = useState<UsageApiResponse | null>(null);
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        const res = await axios.get(`${BASE_URLS.AUTH}api/v1/auth/super-admin/appointmentStats`);
-        console.log("res", res)
-        setDashboardStats(res.data.dashboard);
+        const [statsRes, usageRes] = await Promise.all([
+          axios.get(`${BASE_URLS.AUTH}api/v1/auth/super-admin/appointmentStats`),
+          axios.get(`${BASE_URLS.AUTH}api/v1/auth/super-admin/usageAnalytics`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        ]);
+
+        setDashboardStats(statsRes.data.dashboard);
+        setUsageAnalytics(usageRes.data.usage);
       } catch (error) {
-        console.error('Failed to fetch dashboard stats', error);
+        console.error('Failed to fetch dashboard data', error);
       }
     };
 
     fetchDashboardStats();
   }, [token]);
+
+  const usageChartData = usageAnalytics
+    ? usageAnalytics.months.map((month, index) => ({
+      month,
+      appointments: usageAnalytics.trends.appointments[index],
+      communications: usageAnalytics.trends.communications[index],
+      ecommerce: usageAnalytics.trends.ecommerce[index],
+    }))
+    : [];
+
+
 
 
   return (
@@ -212,7 +238,7 @@ export function AnalyticsDashboard() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={usageData}>
+                  <AreaChart data={usageChartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -222,6 +248,7 @@ export function AnalyticsDashboard() {
                     <Area type="monotone" dataKey="ecommerce" stackId="1" stroke="#6B7280" fill="#6B7280" />
                   </AreaChart>
                 </ResponsiveContainer>
+
               </CardContent>
             </Card>
 
@@ -229,7 +256,7 @@ export function AnalyticsDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Current Month Breakdown</CardTitle>
-                <CardDescription>Feature usage distribution for June 2024</CardDescription>
+                <CardDescription>Feature usage distribution for {usageAnalytics?.currentMonth.name}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -238,21 +265,24 @@ export function AnalyticsDashboard() {
                       <div className="w-3 h-3 bg-primary rounded-full"></div>
                       <span className="text-sm">Appointments</span>
                     </div>
-                    <span className="text-sm text-primary">16,800 (52%)</span>
+                    <span className="text-sm text-primary"> {usageAnalytics?.currentMonth.data.appointments.count} (
+                      {usageAnalytics?.currentMonth.data.appointments.percentage}%)</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-secondary rounded-full"></div>
                       <span className="text-sm">Communications</span>
                     </div>
-                    <span className="text-sm text-secondary">12,300 (38%)</span>
+                    <span className="text-sm text-secondary"> {usageAnalytics?.currentMonth.data.communications.count} (
+                      {usageAnalytics?.currentMonth.data.communications.percentage}%)</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-muted-foreground rounded-full"></div>
                       <span className="text-sm">E-commerce</span>
                     </div>
-                    <span className="text-sm text-muted-foreground">3,890 (10%)</span>
+                    <span className="text-sm text-muted-foreground">{usageAnalytics?.currentMonth.data.ecommerce.count} (
+                      {usageAnalytics?.currentMonth.data.ecommerce.percentage}%)</span>
                   </div>
                 </div>
               </CardContent>

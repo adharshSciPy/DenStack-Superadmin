@@ -107,6 +107,34 @@ export interface OrderData {
   priority: string;
 }
 
+export interface DashboardApiResponse {
+  success: boolean;
+  dashboard: DashboardData;
+}
+
+export interface DashboardData {
+  orderVolume: MetricValue;
+  averageOrderValue: MetricWithGrowth;
+  fulfillmentRate: MetricStringValue;
+}
+
+export interface MetricValue {
+  label: string;
+  value: number;
+}
+
+export interface MetricWithGrowth {
+  label: string;
+  value: number;
+  growthPercent: number;
+}
+
+export interface MetricStringValue {
+  label: string;
+  value: string;
+}
+
+
 export const formatDate = (isoString: string): string => {
   const date = new Date(isoString);
 
@@ -132,6 +160,8 @@ export function OrderManagement() {
 
   const [orders, setOrders] = useState<OrderData[]>([])
   const [priorityFilter, setPriorityFilter] = useState("All");
+  const [orderAnalytics, setOrderAnalytics] = useState<DashboardData | null>(null);
+
 
 
   const token = useAppSelector((state) => state.auth.token)
@@ -148,9 +178,13 @@ export function OrderManagement() {
         }
       )
 
+      const analyticsRes = await axios.get(`${BASE_URLS.INVENTORY}api/v1/order/dashboard-analytics`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
       setOrderStats(statsRes.data.stats)
       setOrders(response.data.data)
-      console.log("response", response);
+      setOrderAnalytics(analyticsRes.data.dashboard);
     } catch (error) {
       console.log(error)
     }
@@ -474,8 +508,8 @@ export function OrderManagement() {
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <span className="text-3xl text-primary">42</span>
-                  <p className="text-sm text-muted-foreground">avg orders/day</p>
+                  <span className="text-3xl text-primary">{orderAnalytics?.orderVolume.value ?? 0}</span>
+                  <p className="text-sm text-muted-foreground">{orderAnalytics?.orderVolume.label}</p>
                 </div>
               </CardContent>
             </Card>
@@ -487,8 +521,8 @@ export function OrderManagement() {
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <span className="text-3xl text-primary">$1,247</span>
-                  <p className="text-sm text-muted-foreground">+12% vs last month</p>
+                  <span className="text-3xl text-primary">₹{orderAnalytics?.averageOrderValue.value.toLocaleString()}</span>
+                  <p className="text-sm text-muted-foreground">{orderAnalytics?.averageOrderValue.growthPercent}% vs last month</p>
                 </div>
               </CardContent>
             </Card>
@@ -500,7 +534,7 @@ export function OrderManagement() {
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <span className="text-3xl text-primary">94.2%</span>
+                  <span className="text-3xl text-primary">{orderAnalytics?.fulfillmentRate.value}%</span>
                   <p className="text-sm text-muted-foreground">delivery success</p>
                 </div>
               </CardContent>
