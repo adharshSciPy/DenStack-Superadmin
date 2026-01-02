@@ -38,6 +38,22 @@ interface SalesStats {
   growthRate: number
 }
 
+interface TopProduct {
+  productName: string;
+  productId: string;
+  totalRevenue: number;
+  totalUnitsSold: number;
+}
+
+interface ClinicPerformance {
+  clinicId: string;
+  clinic: string;
+  orders: number;
+  revenue: number;
+  avgOrder: number;
+}
+
+
 const categoryData = [
   { name: 'Imaging Equipment', value: 35.2, revenue: 14890, color: '#1E4D2B' },
   { name: 'Surgical Instruments', value: 28.7, revenue: 12140, color: '#3FA796' },
@@ -46,21 +62,6 @@ const categoryData = [
   { name: 'Others', value: 4.8, revenue: 2040, color: '#F9FAF9' }
 ];
 
-const topProducts = [
-  { name: 'Digital X-Ray Sensor', sales: 45, revenue: 112455, growth: 23.5 },
-  { name: 'Dental Implant Kit', sales: 38, revenue: 34162, growth: 18.2 },
-  { name: 'Intraoral Camera', sales: 22, revenue: 41778, growth: 15.7 },
-  { name: 'LED Curing Light', sales: 67, revenue: 20033, growth: 12.4 },
-  { name: 'Composite Filling Material', sales: 156, revenue: 23244, growth: 8.9 }
-];
-
-const clinicPerformance = [
-  { clinic: 'SmileCare Dental', orders: 45, revenue: 8920, avgOrder: 198.2, growth: 15.3 },
-  { clinic: 'Elite Orthodontics', orders: 38, revenue: 9870, avgOrder: 259.7, growth: 22.1 },
-  { clinic: 'Modern Dentistry', orders: 42, revenue: 7830, avgOrder: 186.4, growth: 8.7 },
-  { clinic: 'Family Dental Group', orders: 29, revenue: 5420, avgOrder: 186.9, growth: 12.8 },
-  { clinic: 'Dental Care Plus', orders: 35, revenue: 6260, avgOrder: 178.9, growth: -2.4 }
-];
 
 export function SalesAnalytics() {
   const token = useAppSelector((state) => state.auth.token)
@@ -73,6 +74,8 @@ export function SalesAnalytics() {
 
   const [revenueTrend, setRevenueTrend] = useState([]);
   const [orderVolume, setOrderVolume] = useState([]);
+  const [topProductsData, setTopProductsData] = useState<TopProduct[]>([]);
+  const [clinicData, setClinicData] = useState<ClinicPerformance[]>([]);
 
 
 
@@ -90,9 +93,19 @@ export function SalesAnalytics() {
             headers: { Authorization: `Bearer ${token}` }
           }
         )
+
+        const topProductsRes = await axios.get(`${BASE_URLS.INVENTORY}api/v1/order/top-sold-products`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        const clinicRes = await axios.get(`${BASE_URLS.INVENTORY}api/v1/order/clinic-analytics`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        setClinicData(clinicRes.data.data)
+        setTopProductsData(topProductsRes.data.data)
         setOrderVolume(res.data.trends.orderVolume)
         setRevenueTrend(res.data.trends.revenueTrend)
-        console.log("res", res)
 
         setSalesStats(statsRes.data.metrics)
       } catch (error) {
@@ -264,24 +277,20 @@ export function SalesAnalytics() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {topProducts.map((product, index) => (
-                  <div key={product.name} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                {topProductsData.map((product, index) => (
+                  <div key={product.productName} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-medium">
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">{product.sales} units sold</p>
+                        <p className="font-medium">{product.productName}</p>
+                        <p className="text-sm text-muted-foreground">{product.totalUnitsSold} units sold</p>
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <p className="text-primary font-medium">${product.revenue.toLocaleString()}</p>
-                      <div className="flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3 text-green-500" />
-                        <span className="text-sm text-green-500">+{product.growth}%</span>
-                      </div>
+                      <p className="text-primary font-medium">₹{product.totalRevenue.toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
@@ -305,24 +314,15 @@ export function SalesAnalytics() {
                       <th className="text-left p-3">Orders</th>
                       <th className="text-left p-3">Revenue</th>
                       <th className="text-left p-3">Avg Order</th>
-                      <th className="text-left p-3">Growth</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {clinicPerformance.map((clinic, index) => (
+                    {clinicData.map((clinic, index) => (
                       <tr key={index} className="border-b hover:bg-accent/50">
                         <td className="p-3 font-medium">{clinic.clinic}</td>
                         <td className="p-3">{clinic.orders}</td>
-                        <td className="p-3 text-primary">${clinic.revenue.toLocaleString()}</td>
-                        <td className="p-3">${clinic.avgOrder.toFixed(0)}</td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-1">
-                            <TrendingUp className={`h-3 w-3 ${clinic.growth > 0 ? 'text-green-500' : 'text-red-500'}`} />
-                            <span className={`text-sm ${clinic.growth > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {clinic.growth > 0 ? '+' : ''}{clinic.growth}%
-                            </span>
-                          </div>
-                        </td>
+                        <td className="p-3 text-primary">₹{clinic.revenue.toLocaleString()}</td>
+                        <td className="p-3">₹{clinic.avgOrder.toFixed(0)}</td>
                       </tr>
                     ))}
                   </tbody>
