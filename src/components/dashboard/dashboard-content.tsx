@@ -13,7 +13,7 @@ import { NotificationCenter } from './sections/notification-center';
 import { SystemActivity } from './sections/system-activity';
 import { GlobalSettings } from './sections/global-settings';
 import { DoctorManagement } from './sections/doctor-management';
-
+import SuperAdminLabPanel from './sections/lab-activity';
 interface DashboardContentProps {
   activeSection: string;
 }
@@ -51,6 +51,8 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
         return <SystemActivity />;
       case 'settings':
         return <GlobalSettings />;
+      case 'labs':
+        return <SuperAdminLabPanel />;
       default:
         return <DashboardOverview />;
     }
