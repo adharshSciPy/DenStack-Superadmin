@@ -6,6 +6,9 @@ import {
   HardDrive, Filter, Activity, X, Loader, UserPlus
 } from 'lucide-react';
 
+// Define the three lab types for technicians
+type TechnicianLabType = "inHouse" | "external" | "aligner";
+
 // API response interface based on your data
 interface ExternalVendor {
   _id: string;
@@ -31,16 +34,16 @@ interface Technician {
   role: string;
   technicianId: string;
   labVendorId: string | null;
-  labType: 'aligner' | 'external' | 'inHouse';
+  labType: TechnicianLabType;
   createdAt: string;
 }
 
-// Extended Lab interface for UI (compatible with your existing UI)
+// Extended Lab interface for UI
 interface Lab {
   id: string;
   name: string;
   registrationNumber: string;
-  type: 'Pathology' | 'Radiology' | 'Clinical' | 'Research' | 'Diagnostic' | string;
+  type: TechnicianLabType;
   status: 'active' | 'pending' | 'suspended' | 'inactive';
   email: string;
   phone: string;
@@ -75,17 +78,18 @@ interface Lab {
   lastActive: string;
   compliance: { hipaa: boolean; iso: boolean; cap: boolean; clia: boolean; };
   performance: { rating: number; reviews: number; avgResponseTime: string; accuracy: number; };
-  technicians?: Technician[]; // Added technicians array
+  technicians?: Technician[];
+  isActive: boolean;
 }
 
-// Vendor creation form data interface
+// Vendor creation form data interface - Updated to match backend exactly
 interface VendorFormData {
   name: string;
   contactPerson: string;
   email: string;
   services: string[];
   isActive: boolean;
-  vendorType: 'lab' | 'aligner';
+  type: 'external' | 'aligner'; // Changed from vendorType to type to match backend
 }
 
 // Technician registration form data
@@ -96,7 +100,8 @@ interface TechnicianFormData {
   password: string;
   confirmPassword: string;
   labVendorId: string;
-  labType: 'aligner' | 'external';
+  labType: TechnicianLabType;
+  clinicId?: string;
 }
 
 // Available services options
@@ -116,21 +121,31 @@ const availableServices = [
 
 // Default values for fields not present in API
 const getDefaultLabValues = (vendor: ExternalVendor): Lab => {
+  // Determine lab type based on vendor data
+  let labType: TechnicianLabType = 'external';
+  
+  if (vendor.type === 'aligner' || vendor.services.some(s => 
+    s.includes('Aligner') || s.includes('Orthodontic') || s.includes('Retainer'))) {
+    labType = 'aligner';
+  } else if (vendor.clinicId) {
+    labType = 'inHouse';
+  } else {
+    labType = 'external';
+  }
+
   return {
     id: vendor._id,
     name: vendor.name,
     registrationNumber: `REG${Math.floor(Math.random() * 1000000)}`,
-    type: vendor.services.includes('X-ray') ? 'Radiology' : 
-          vendor.services.includes('Pathology') ? 'Pathology' : 
-          vendor.type === 'aligner' ? 'Clinical' : 'Diagnostic',
+    type: labType,
     status: vendor.isActive ? 'active' : 'inactive',
     email: vendor.email,
-    phone: '+1 234-567-8901', // Default as API doesn't provide
-    address: '123 Medical Plaza', // Default
-    city: 'New York', // Default
-    state: 'NY', // Default
-    country: 'USA', // Default
-    pincode: '10001', // Default
+    phone: '', // Remove default phone number
+    address: '', // Remove default address
+    city: '', // Remove default city
+    state: '', // Remove default state
+    country: '',
+    pincode: '',
     registrationDate: vendor.createdAt,
     expiryDate: new Date(new Date(vendor.createdAt).setFullYear(new Date(vendor.createdAt).getFullYear() + 1)).toISOString(),
     licenseNumber: `LIC${Math.floor(Math.random() * 1000000)}`,
@@ -147,7 +162,7 @@ const getDefaultLabValues = (vendor: ExternalVendor): Lab => {
     contactPerson: {
       name: vendor.contactPerson || 'Not specified',
       email: vendor.email,
-      phone: '+1 234-567-8902',
+      phone: '', // Remove default phone
       designation: 'Lab Director',
     },
     documents: [],
@@ -165,7 +180,8 @@ const getDefaultLabValues = (vendor: ExternalVendor): Lab => {
     lastActive: vendor.updatedAt,
     compliance: { hipaa: false, iso: false, cap: false, clia: false },
     performance: { rating: 0, reviews: 0, avgResponseTime: 'N/A', accuracy: 0 },
-    technicians: [] // Will be populated when we fetch technicians
+    technicians: [],
+    isActive: vendor.isActive
   };
 };
 
@@ -188,12 +204,12 @@ const DL: React.FC<{ items: [string, string][] }> = ({ items }) => (
   <dl>{items.map(([k, v]) => (
     <div key={k} style={{ marginBottom: 9 }}>
       <dt style={{ fontSize: 11, color: '#94a3b8', marginBottom: 1 }}>{k}</dt>
-      <dd style={{ fontSize: 13.5, color: '#1e293b', fontWeight: 500 }}>{v}</dd>
+      <dd style={{ fontSize: 13.5, color: '#1e293b', fontWeight: 500 }}>{v || 'Not provided'}</dd>
     </div>
   ))}</dl>
 );
 
-// Add Vendor Modal Component
+// Add Vendor Modal Component - Updated to match backend exactly
 interface AddVendorModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -208,13 +224,12 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
     email: '',
     services: [],
     isActive: true,
-    vendorType: vendorType
+    type: vendorType === 'lab' ? 'external' : 'aligner' // Map to backend expected values
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Reset form when modal opens/closes or vendorType changes
   useEffect(() => {
     if (isOpen) {
       setFormData({
@@ -223,7 +238,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
         email: '',
         services: [],
         isActive: true,
-        vendorType: vendorType
+        type: vendorType === 'lab' ? 'external' : 'aligner'
       });
       setError(null);
       setSuccess(null);
@@ -255,7 +270,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
@@ -268,12 +283,20 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
         ? 'http://localhost:8006/api/v1/lab/create-vendor'
         : 'http://localhost:8006/api/v1/lab/vendors/create-aligner';
 
+      // Send exactly what the backend expects
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          contactPerson: formData.contactPerson.trim() || undefined,
+          email: formData.email.trim() || undefined,
+          services: formData.services,
+          isActive: formData.isActive,
+          type: formData.type // 'external' or 'aligner'
+        }),
       });
 
       const data = await response.json();
@@ -380,7 +403,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
 
         {/* Modal Body */}
         <form onSubmit={handleSubmit} style={{ padding: 24 }}>
-          {/* Error Message */}
+          {/* Error and Success Messages */}
           {error && (
             <div style={{
               padding: '12px 16px',
@@ -399,7 +422,6 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({ isOpen, onClose, onSucc
             </div>
           )}
 
-          {/* Success Message */}
           {success && (
             <div style={{
               padding: '12px 16px',
@@ -603,7 +625,7 @@ interface AddTechnicianModalProps {
   onClose: () => void;
   onSuccess: () => void;
   labVendorId: string;
-  labType: 'aligner' | 'external';
+  labType: TechnicianLabType;
   vendorName: string;
 }
 
@@ -622,12 +644,17 @@ const AddTechnicianModal: React.FC<AddTechnicianModalProps> = ({
     password: '',
     confirmPassword: '',
     labVendorId: labVendorId,
-    labType: labType
+    labType: labType,
+    clinicId: labType === 'inHouse' ? '' : undefined
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedClinic, setSelectedClinic] = useState<string>('');
+
+  // Mock clinics for inHouse labs - In production, fetch from API
+  const [clinics, setClinics] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -638,10 +665,17 @@ const AddTechnicianModal: React.FC<AddTechnicianModalProps> = ({
         password: '',
         confirmPassword: '',
         labVendorId: labVendorId,
-        labType: labType
+        labType: labType,
+        clinicId: labType === 'inHouse' ? '' : undefined
       });
+      setSelectedClinic('');
       setError(null);
       setSuccess(null);
+      
+      // Fetch clinics if needed for inHouse labs
+      if (labType === 'inHouse') {
+        // fetchClinics();
+      }
     }
   }, [isOpen, labVendorId, labType]);
 
@@ -666,6 +700,10 @@ const AddTechnicianModal: React.FC<AddTechnicianModalProps> = ({
       setError('Passwords do not match');
       return false;
     }
+    if (labType === 'inHouse' && !selectedClinic) {
+      setError('Please select a clinic for inHouse technician');
+      return false;
+    }
     return true;
   };
 
@@ -678,20 +716,25 @@ const AddTechnicianModal: React.FC<AddTechnicianModalProps> = ({
     setSuccess(null);
 
     try {
+      const requestBody: any = {
+        name: formData.name,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        password: formData.password,
+        labVendorId: formData.labVendorId,
+        labType: formData.labType,
+      };
+
+      if (labType === 'inHouse') {
+        requestBody.clinicId = selectedClinic;
+      }
+
       const response = await fetch('http://localhost:8001/api/v1/auth/technician/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
-          password: formData.password,
-          labVendorId: formData.labVendorId,
-          labType: formData.labType,
-          clinicId: null // Important: Set to null for lab technicians
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -707,6 +750,8 @@ const AddTechnicianModal: React.FC<AddTechnicianModalProps> = ({
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to register technician');
+      console.log(error);
+      
     } finally {
       setLoading(false);
     }
@@ -773,7 +818,11 @@ const AddTechnicianModal: React.FC<AddTechnicianModalProps> = ({
                 Add Technician to {vendorName}
               </div>
               <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>
-                Register a new technician for this {labType} vendor
+                Register a new technician for this <span style={{ 
+                  textTransform: 'capitalize',
+                  fontWeight: 600,
+                  color: labType === 'inHouse' ? '#2f9e44' : labType === 'aligner' ? '#764ba2' : '#667eea'
+                }}>{labType}</span> vendor
               </div>
             </div>
           </div>
@@ -835,6 +884,28 @@ const AddTechnicianModal: React.FC<AddTechnicianModalProps> = ({
               {success}
             </div>
           )}
+
+          {/* Lab Type Badge */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 16px',
+            marginBottom: 20,
+            background: labType === 'inHouse' ? 'rgba(81,207,102,0.08)' : 
+                        labType === 'aligner' ? 'rgba(118,75,162,0.08)' : 'rgba(102,126,234,0.08)',
+            border: `1px solid ${
+              labType === 'inHouse' ? 'rgba(81,207,102,0.25)' : 
+              labType === 'aligner' ? 'rgba(118,75,162,0.25)' : 'rgba(102,126,234,0.25)'
+            }`,
+            borderRadius: 10,
+            fontSize: 13,
+            color: labType === 'inHouse' ? '#2f9e44' : 
+                   labType === 'aligner' ? '#764ba2' : '#667eea'
+          }}>
+            <Building2 size={16} />
+            <span><strong>Lab Type:</strong> {labType.charAt(0).toUpperCase() + labType.slice(1)}</span>
+          </div>
 
           {/* Form Fields */}
           <div style={{ marginBottom: 20 }}>
@@ -959,7 +1030,7 @@ const AddTechnicianModal: React.FC<AddTechnicianModalProps> = ({
             </div>
           </div>
 
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>
               Confirm Password <span style={{ color: '#e03131' }}>*</span>
             </label>
@@ -984,6 +1055,36 @@ const AddTechnicianModal: React.FC<AddTechnicianModalProps> = ({
             />
           </div>
 
+          {/* Clinic Selection for inHouse Labs */}
+          {labType === 'inHouse' && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>
+                Select Clinic <span style={{ color: '#e03131' }}>*</span>
+              </label>
+              <select
+                value={selectedClinic}
+                onChange={e => setSelectedClinic(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: 42,
+                  padding: '0 14px',
+                  background: 'rgba(248,250,252,0.95)',
+                  border: '1px solid rgba(148,163,184,0.25)',
+                  borderRadius: 10,
+                  fontSize: 13.5,
+                  color: '#1e293b',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+                required
+              >
+                <option value="">Select a clinic</option>
+                {/* Add clinic options here from API */}
+              </select>
+            </div>
+          )}
+
           {/* Info Box */}
           <div style={{
             padding: '12px 16px',
@@ -995,6 +1096,12 @@ const AddTechnicianModal: React.FC<AddTechnicianModalProps> = ({
             color: '#475569'
           }}>
             <strong style={{ color: '#667eea' }}>Note:</strong> The technician will receive their login credentials via email after registration.
+            {labType === 'inHouse' && (
+              <div style={{ marginTop: 4, color: '#2f9e44' }}>
+                <CheckCircle size={12} style={{ display: 'inline', marginRight: 4 }} />
+                This technician will be associated with the selected clinic.
+              </div>
+            )}
           </div>
 
           {/* Modal Footer */}
@@ -1067,7 +1174,11 @@ const SuperAdminLabPanel: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [vendorType, setVendorType] = useState<'lab' | 'aligner'>('lab');
   const [showTechnicianModal, setShowTechnicianModal] = useState(false);
-  const [selectedVendorForTechnician, setSelectedVendorForTechnician] = useState<{ id: string; name: string; type: 'aligner' | 'external' } | null>(null);
+  const [selectedVendorForTechnician, setSelectedVendorForTechnician] = useState<{ 
+    id: string; 
+    name: string; 
+    type: TechnicianLabType;
+  } | null>(null);
 
   // Fetch labs from API
   const fetchLabs = async () => {
@@ -1080,7 +1191,6 @@ const SuperAdminLabPanel: React.FC = () => {
       }
       const data: ExternalVendor[] = await response.json();
       
-      // Transform API data to Lab interface
       const transformedLabs = data.map(vendor => getDefaultLabValues(vendor));
       
       setLabs(transformedLabs);
@@ -1111,13 +1221,7 @@ const SuperAdminLabPanel: React.FC = () => {
     setFilteredLabs(f);
   }, [labs, searchTerm, filters]);
 
-  const totalRevenue = labs.filter(l => l.subscription.status === 'active').reduce((s, l) => s + l.subscription.amount, 0);
-  const totalTests = labs.reduce((s, l) => s + l.monthlyTests, 0);
-  const avgRating = labs.length > 0 ? (labs.reduce((s, l) => s + l.performance.rating, 0) / labs.length).toFixed(1) : '0';
-
   const handleStatusChange = async (labId: string, newStatus: Lab['status']) => {
-    // In a real app, you'd call an API to update the status
-    // For now, just update local state
     setLabs(prev => prev.map(l => l.id === labId ? { ...l, status: newStatus, isActive: newStatus === 'active' } : l));
     setSelectedLab(null);
   };
@@ -1126,7 +1230,6 @@ const SuperAdminLabPanel: React.FC = () => {
     if (action === 'activate') setLabs(prev => prev.map(l => bulkSelected.includes(l.id) ? { ...l, status: 'active' as const, isActive: true } : l));
     if (action === 'suspend') setLabs(prev => prev.map(l => bulkSelected.includes(l.id) ? { ...l, status: 'suspended' as const, isActive: false } : l));
     if (action === 'delete') {
-      // In production, you'd call an API to delete
       setLabs(prev => prev.filter(l => !bulkSelected.includes(l.id)));
     }
     setBulkSelected([]);
@@ -1146,7 +1249,7 @@ const SuperAdminLabPanel: React.FC = () => {
     setSelectedVendorForTechnician({
       id: lab.id,
       name: lab.name,
-      type: lab.type === 'Radiology' || lab.type === 'Pathology' ? 'external' : 'aligner'
+      type: lab.type
     });
     setShowTechnicianModal(true);
   };
@@ -1163,12 +1266,11 @@ const SuperAdminLabPanel: React.FC = () => {
     inactive:  { bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.2)', color: '#64748b', icon: <AlertCircle size={11}/> },
   };
 
-  /* plan styling */
-  const planMap: Record<string, { bg: string; border: string; color: string }> = {
-    Enterprise:   { bg: 'rgba(102,126,234,0.12)', border: 'rgba(102,126,234,0.3)',  color: '#667eea' },
-    Professional: { bg: 'rgba(118,75,162,0.1)',   border: 'rgba(118,75,162,0.25)', color: '#764ba2' },
-    Basic:        { bg: 'rgba(148,163,184,0.1)',   border: 'rgba(148,163,184,0.25)', color: '#64748b' },
-    Custom:       { bg: 'rgba(102,126,234,0.1)',   border: 'rgba(102,126,234,0.2)', color: '#667eea' },
+  /* lab type styling */
+  const labTypeMap: Record<TechnicianLabType, { bg: string; border: string; color: string }> = {
+    inHouse:  { bg: 'rgba(81,207,102,0.12)', border: 'rgba(81,207,102,0.3)', color: '#2f9e44' },
+    external: { bg: 'rgba(102,126,234,0.12)', border: 'rgba(102,126,234,0.3)', color: '#667eea' },
+    aligner:  { bg: 'rgba(118,75,162,0.1)', border: 'rgba(118,75,162,0.25)', color: '#764ba2' }
   };
 
   /* shared css strings used inline */
@@ -1222,9 +1324,13 @@ const SuperAdminLabPanel: React.FC = () => {
       {/* ─── STATS ─── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16, padding: '24px 28px 0' }}>
         {[
-          { label: 'Total Labs',       value: String(labs.length),            },
-          { label: 'Active Labs',      value: String(labs.filter(l => l.status === 'active').length), icon: <Activity size={17}/>, accent: '#2f9e44', accentBg: 'rgba(81,207,102,0.1)' },
-          ].map((card, i) => (
+          { label: 'Total Labs', value: String(labs.length), icon: <Building2 size={17}/>, accent: '#667eea', accentBg: 'rgba(102,126,234,0.1)' },
+          { label: 'Active Labs', value: String(labs.filter(l => l.status === 'active').length), icon: <Activity size={17}/>, accent: '#2f9e44', accentBg: 'rgba(81,207,102,0.1)' },
+          { label: 'By Type', 
+            value: `${labs.filter(l => l.type === 'external').length} ext · ${labs.filter(l => l.type === 'aligner').length} alg · ${labs.filter(l => l.type === 'inHouse').length} inH`,
+            icon: <Beaker size={17}/>, accent: '#764ba2', accentBg: 'rgba(118,75,162,0.1)' },
+          { label: 'Total Technicians', value: String(labs.reduce((sum, l) => sum + (l.totalStaff || 0), 0)), icon: <UserPlus size={17}/>, accent: '#0891b2', accentBg: 'rgba(8,145,178,0.1)' },
+        ].map((card, i) => (
           <div key={i} style={{ ...glass, borderRadius: 18, padding: '20px 22px', position: 'relative', overflow: 'hidden', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'default' }}
             onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-2px)'; d.style.boxShadow = '0 12px 28px rgba(0,0,0,0.1)'; }}
             onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = glass.boxShadow; }}
@@ -1234,8 +1340,7 @@ const SuperAdminLabPanel: React.FC = () => {
               <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{card.label}</div>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: card.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.accent }}>{card.icon}</div>
             </div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#1e293b', lineHeight: 1, letterSpacing: '-0.5px' }}>{card.value}</div>
-            {/* <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>{card.sub}</div> */}
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#1e293b', lineHeight: 1.3, letterSpacing: '-0.5px' }}>{card.value}</div>
           </div>
         ))}
       </div>
@@ -1261,6 +1366,14 @@ const SuperAdminLabPanel: React.FC = () => {
               <option value="pending">Pending</option>
               <option value="suspended">Suspended</option>
               <option value="inactive">Inactive</option>
+            </select>
+
+            <select value={filters.type} onChange={e => setFilters({ ...filters, type: e.target.value })}
+              style={{ ...inputBase, padding: '0 12px', cursor: 'pointer', minWidth: 120 }}>
+              <option value="all">All Types</option>
+              <option value="external">External</option>
+              <option value="aligner">Aligner</option>
+              <option value="inHouse">In-House</option>
             </select>
 
             <div style={{ display: 'flex', gap: 8 }}>
@@ -1315,24 +1428,35 @@ const SuperAdminLabPanel: React.FC = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'rgba(241,245,249,0.8)', borderBottom: '1px solid rgba(148,163,184,0.18)' }}>
-                      <th style={{ padding: '11px 14px 11px 20px' }}>
-                        </th>
-                      {['Lab Details','Status','Contact','Staff','Actions'].map((h, hi) => (
-                        <th key={h} style={{ padding: '11px 14px', fontSize: 10.5, fontWeight: 600, color: '#94a3b8', letterSpacing: '0.9px', textTransform: 'uppercase' as const, textAlign: hi === 4 ? 'right' as const : 'left' as const }}>{h}</th>
+                      <th style={{ padding: '11px 14px 11px 20px', width: 30 }}>
+                        <input type="checkbox" 
+                          onChange={e => setBulkSelected(e.target.checked ? filteredLabs.map(l => l.id) : [])}
+                          checked={bulkSelected.length === filteredLabs.length && filteredLabs.length > 0}
+                          style={{ accentColor: '#667eea' }} />
+                      </th>
+                      {['Lab Details','Type','Status','Contact','Staff','Actions'].map((h, hi) => (
+                        <th key={h} style={{ padding: '11px 14px', fontSize: 10.5, fontWeight: 600, color: '#94a3b8', letterSpacing: '0.9px', textTransform: 'uppercase' as const, textAlign: hi === 5 ? 'right' as const : 'left' as const }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredLabs.map(lab => {
                       const sc = statusMap[lab.status] || statusMap.inactive;
-                      const pc = planMap[lab.subscription.plan] || planMap.Basic;
+                      const tc = labTypeMap[lab.type] || labTypeMap.external;
                       return (
                         <tr key={lab.id} style={{ borderBottom: '1px solid rgba(148,163,184,0.1)', transition: 'background 0.15s' }}
                           onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(241,245,249,0.6)'}
                           onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ''}>
 
                           <td style={{ padding: '14px 14px 14px 20px', verticalAlign: 'middle' }}>
-                           </td>
+                            <input type="checkbox" 
+                              checked={bulkSelected.includes(lab.id)}
+                              onChange={e => {
+                                if (e.target.checked) setBulkSelected([...bulkSelected, lab.id]);
+                                else setBulkSelected(bulkSelected.filter(id => id !== lab.id));
+                              }}
+                              style={{ accentColor: '#667eea' }} />
+                          </td>
 
                           {/* Lab details */}
                           <td style={{ padding: '14px', verticalAlign: 'middle' }}>
@@ -1348,10 +1472,18 @@ const SuperAdminLabPanel: React.FC = () => {
                               </div>
                               <div>
                                 <div style={{ fontSize: 13.5, fontWeight: 700, color: '#1e293b' }}>{lab.name}</div>
-                                <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 1 }}>ID: {lab.id} · {lab.type}</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, fontSize: 11, color: '#94a3b8' }}><MapPin size={9}/>{lab.city}, {lab.state}</div>
+                                <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 1 }}>ID: {lab.id.substring(0, 8)}...</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, fontSize: 11, color: '#94a3b8' }}><MapPin size={9}/>{lab.city || 'N/A'}, {lab.state || 'N/A'}</div>
                               </div>
                             </div>
+                          </td>
+
+                          {/* Type */}
+                          <td style={{ padding: '14px', verticalAlign: 'middle' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color, fontSize: 11.5, fontWeight: 600 }}>
+                              {lab.type === 'inHouse' && '🏥'} {lab.type === 'external' && '🌐'} {lab.type === 'aligner' && '🦷'}
+                              {lab.type.charAt(0).toUpperCase() + lab.type.slice(1)}
+                            </span>
                           </td>
 
                           {/* Status */}
@@ -1364,8 +1496,9 @@ const SuperAdminLabPanel: React.FC = () => {
                           {/* Contact */}
                           <td style={{ padding: '14px', verticalAlign: 'middle' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#475569', marginBottom: 3 }}><Mail size={11} color="#94a3b8"/>{lab.email}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#475569', marginBottom: 3 }}><Phone size={11} color="#94a3b8"/>{lab.phone}</div>
-                            <div style={{ fontSize: 11, color: '#94a3b8' }}>Contact: {lab.contactPerson.name}</div>
+                            {lab.contactPerson.name !== 'Not specified' && (
+                              <div style={{ fontSize: 11, color: '#94a3b8' }}>Contact: {lab.contactPerson.name}</div>
+                            )}
                           </td>
 
                           {/* Staff Count */}
@@ -1373,7 +1506,6 @@ const SuperAdminLabPanel: React.FC = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <UserPlus size={14} color="#94a3b8" />
                               <span style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>{lab.totalStaff || 0}</span>
-                              <span style={{ fontSize: 11, color: '#94a3b8' }}>technicians</span>
                             </div>
                           </td>
 
@@ -1384,7 +1516,6 @@ const SuperAdminLabPanel: React.FC = () => {
                                 { icon: <Eye size={13}/>,         title: 'View',     onClick: () => setSelectedLab(lab), hc: '#667eea', hbg: 'rgba(102,126,234,0.1)' },
                                 { icon: <UserPlus size={13}/>,    title: 'Add Technician', onClick: () => handleAddTechnician(lab), hc: '#2f9e44', hbg: 'rgba(81,207,102,0.1)' },
                                 { icon: <Edit size={13}/>,        title: 'Edit',     onClick: () => console.log('Edit', lab.id), hc: '#0891b2', hbg: 'rgba(8,145,178,0.1)' },
-                                { icon: <Settings size={13}/>,    title: 'Settings', onClick: () => console.log('Settings', lab.id), hc: '#475569', hbg: 'rgba(71,85,105,0.08)' },
                               ].map((btn, bi) => (
                                 <button key={bi} onClick={btn.onClick} title={btn.title}
                                   style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid transparent', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#94a3b8', transition: 'all 0.15s' }}
@@ -1413,11 +1544,6 @@ const SuperAdminLabPanel: React.FC = () => {
               {filteredLabs.length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 20px', borderTop: '1px solid rgba(148,163,184,0.15)', background: 'rgba(241,245,249,0.6)', fontSize: 12.5, color: '#94a3b8' }}>
                   <div>Showing <strong style={{ color: '#1e293b' }}>1–{filteredLabs.length}</strong> of <strong style={{ color: '#1e293b' }}>{filteredLabs.length}</strong> results</div>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {['‹','1','›'].map((p, i) => (
-                      <button key={i} style={{ width: 32, height: 32, borderRadius: 8, border: p === '1' ? 'none' : '1px solid rgba(148,163,184,0.25)', background: p === '1' ? primaryGradient : 'rgba(255,255,255,0.8)', color: p === '1' ? '#fff' : '#475569', fontSize: 13, fontWeight: p === '1' ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit', boxShadow: p === '1' ? '0 2px 8px rgba(102,126,234,0.3)' : 'none' }}>{p}</button>
-                    ))}
-                  </div>
                 </div>
               )}
             </>
@@ -1466,7 +1592,7 @@ const SuperAdminLabPanel: React.FC = () => {
                 </div>
               </div>
               <button onClick={() => setSelectedLab(null)} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid rgba(148,163,184,0.25)', background: 'rgba(241,245,249,0.9)', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <XCircle size={16}/>
+                <X size={16}/>
               </button>
             </div>
 
@@ -1479,15 +1605,13 @@ const SuperAdminLabPanel: React.FC = () => {
                     ['License', selectedLab.licenseNumber], 
                     ['Accreditation', selectedLab.accreditation.join(', ') || 'None'], 
                     ['Expiry', new Date(selectedLab.expiryDate).toLocaleDateString()],
-                    ['Services', selectedLab.type]
+                    ['Type', selectedLab.type]
                   ]} />
                 </InfoCard>
                 <InfoCard title="Contact">
                   <DL items={[
                     ['Email', selectedLab.email], 
-                    ['Phone', selectedLab.phone], 
-                    ['Location', `${selectedLab.address}, ${selectedLab.city}, ${selectedLab.state}`], 
-                    ['Person', `${selectedLab.contactPerson.name} · ${selectedLab.contactPerson.designation}`]
+                    ['Contact Person', selectedLab.contactPerson.name !== 'Not specified' ? selectedLab.contactPerson.name : 'Not provided']
                   ]} />
                 </InfoCard>
               </div>
