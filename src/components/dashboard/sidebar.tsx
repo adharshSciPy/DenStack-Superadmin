@@ -39,6 +39,8 @@ const sidebarItems = [
   { id: "subscriptions", label: "Subscriptions", icon: CreditCard, badge: "3" },
   { id: "analytics", label: "Analytics", icon: BarChart3, badge: null },
   { id: "labs", label: "Lab Management", icon: Building2, badge: null },
+  { id: "blogs", label: "Blog Management", icon: FileText, badge: null },
+
 ];
 
 const ecommerceItems = [

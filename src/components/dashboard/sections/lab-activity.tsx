@@ -1359,14 +1359,7 @@ const SuperAdminLabPanel: React.FC = () => {
                 style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13.5, color: '#1e293b', width: '100%', fontFamily: 'inherit' }} />
             </div>
 
-            <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}
-              style={{ ...inputBase, padding: '0 12px', cursor: 'pointer', minWidth: 120 }}>
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="suspended">Suspended</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            
 
             <select value={filters.type} onChange={e => setFilters({ ...filters, type: e.target.value })}
               style={{ ...inputBase, padding: '0 12px', cursor: 'pointer', minWidth: 120 }}>

@@ -14,6 +14,7 @@ import { SystemActivity } from './sections/system-activity';
 import { GlobalSettings } from './sections/global-settings';
 import { DoctorManagement } from './sections/doctor-management';
 import SuperAdminLabPanel from './sections/lab-activity';
+import BlogManagement from './sections/BlogManagement';
 interface DashboardContentProps {
   activeSection: string;
 }
@@ -53,6 +54,8 @@ export function DashboardContent({ activeSection }: DashboardContentProps) {
         return <GlobalSettings />;
       case 'labs':
         return <SuperAdminLabPanel />;
+      case 'blogs':
+        return <BlogManagement />;
       default:
         return <DashboardOverview />;
     }
